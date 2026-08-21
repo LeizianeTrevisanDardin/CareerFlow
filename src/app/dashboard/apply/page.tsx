@@ -1,0 +1,13 @@
+export default function ApplyPage() {
+  return (
+    <div className="p-8">
+      <h1 className="text-3xl font-bold text-slate-900">
+        Apply Copilot
+      </h1>
+
+      <p className="mt-2 text-slate-500">
+        Build a tailored application for any job with AI.
+      </p>
+    </div>
+  );
+}
