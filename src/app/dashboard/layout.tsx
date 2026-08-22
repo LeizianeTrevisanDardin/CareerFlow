@@ -1,47 +1,49 @@
-import {
-  Bell,
-  Search,
-  LayoutDashboard,
-  BriefcaseBusiness,
-  Target,
-} from "lucide-react";
+import { redirect } from "next/navigation";
 
 import Header from "@/components/dashboard/Header";
-
-
-import Link from "next/link";
 import Sidebar from "@/components/dashboard/Sidebar";
+import { createClient } from "@/lib/supabase/server";
 
-const overviewItems = [
-  {
-    label: "Dashboard",
-    href: "/dashboard",
-    icon: LayoutDashboard,
-  },
-  {
-    label: "Applications",
-    href: "/dashboard/applications",
-    icon: BriefcaseBusiness,
-  },
-  {
-    label: "Jobs",
-    href: "/dashboard/jobs",
-    icon: Target,
-  },
-];
-
-export default function DashboardLayout({
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="flex min-h-screen">
-      <Sidebar />
-            
+  const supabase = await createClient();
 
-      <main className="flex flex-1 flex-col">
-       <Header />
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const { data: profile, error: profileError }= await supabase
+  .from ("profiles")
+  .select("full_name, job_title, credits, profile_completion")
+  .eq("id", user.id)
+  .single();
+
+  if(profileError)
+    console.error("Error loading profile:", profileError);
+
+
+  return (
+    <div className="flex min-h-screen bg-[#f6f8f9] text-slate-900">
+      <Sidebar />
+
+      <main className="flex min-w-0 flex-1 flex-col">
+        <Header 
+          fullName={
+            profile?.full_name ??
+            user.user_metadata.full_name ??
+            "Careerflow user"
+          }
+          email={user.email ?? ""}
+          jobTitle={profile?.job_title ?? "Complete your profile"}
+          credits={profile?.credits ?? 0}
+        />
 
         {children}
       </main>

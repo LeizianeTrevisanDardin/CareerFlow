@@ -1,8 +1,49 @@
 import { Plus, BriefcaseBusiness, Target, FileCheck2, Coins, Sparkles } from "lucide-react";
 import DashboardCard from "@/components/dashboard/DashboardCard";
 import Link from "next/link";
+import { redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
 
-export default function DashboardPage() {
+export default async function DashboardPage() {
+
+    const supabase = await createClient();
+
+    const {
+        data: {user},
+    } = await supabase.auth.getUser();
+
+    if(!user){
+        redirect("/login");
+    }
+
+    const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name, profile_completion")
+    .eq("id", user.id)
+    .single();
+
+    const profileCompletion = profile?.profile_completion ?? 0;
+
+    const firstName =
+    profile?.full_name?.trim().split(" ")[0] ?? "there";
+
+    const now = new Date();
+
+    const hour = now.getHours();
+
+    const greeting = 
+        hour < 12
+        ? "Good Morning"
+        : hour < 18 
+        ? "Good Afternoon"
+        : "Good Evening"
+
+    const formattedDate = now.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+    });
+
   return (
     <div className="p-8">
 
@@ -10,11 +51,11 @@ export default function DashboardPage() {
       <div className="flex items-end justify-between">
         <div>
           <p className="text-sm font-medium uppercase tracking-wide text-slate-400">
-            Thursday, August 20
+            {formattedDate}
           </p>
 
           <h1 className="mt-3 text-4xl font-bold tracking-tight text-slate-900">
-            Good morning, Leiziane.
+            {greeting}, {firstName}.
           </h1>
 
           <p className="mt-2 text-lg text-slate-500">
@@ -44,13 +85,15 @@ export default function DashboardPage() {
             </div>
 
             <div className="flex h-16 w-16 items-center justify-center rounded-full border-4 border-emerald-200 text-sm font-bold">
-            72%
+            {profileCompletion}%
             </div>
         </div>
 
             <div className="mt-8">
                 <div className="h-2 w-full overflow-hidden rounded-full bg-white/20">
-                <div className="h-full w-[72%] rounded-full bg-emerald-200" />
+                <div className="h-full rounded-full bg-emerald-200 transition-all"
+                style={{ width: `${profileCompletion}%`}}
+                />
                 </div>
             </div>
 
@@ -59,9 +102,12 @@ export default function DashboardPage() {
                 your job matches.
             </p>
 
-            <button className="mt-6 text-sm font-semibold text-white transition hover:text-emerald-200">
+           <Link
+                href="/dashboard/profile"
+                className="mt-6 inline-block text-sm font-semibold text-white transition hover:text-emerald-200"
+                >
                 Continue Profile →
-            </button>
+            </Link>
             </section>
         
 
