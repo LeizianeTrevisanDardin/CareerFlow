@@ -12,7 +12,9 @@ import { gemini } from "@/lib/gemini";
 // CREATE JOB ANALYSIS
 // ======================================================
 
-export async function createJobAnalysis(formData: FormData) {
+export async function createJobAnalysis(
+  formData: FormData
+) {
   const supabase = await createClient();
 
   const {
@@ -38,18 +40,27 @@ export async function createJobAnalysis(formData: FormData) {
     );
   }
 
-  const { data: analysis, error: analysisError } =
-    await supabase
-      .from("job_analyses")
-      .insert({
-        user_id: user.id,
-        company_name: companyName?.trim() || null,
-        job_title: jobTitle?.trim() || null,
-        job_description: jobDescription.trim(),
-        status: "pending",
-      })
-      .select()
-      .single();
+  // ======================================================
+  // CREATE ANALYSIS
+  // ======================================================
+
+  const {
+    data: analysis,
+    error: analysisError,
+  } = await supabase
+    .from("job_analyses")
+    .insert({
+      user_id: user.id,
+      company_name:
+        companyName?.trim() || null,
+      job_title:
+        jobTitle?.trim() || null,
+      job_description:
+        jobDescription.trim(),
+      status: "pending",
+    })
+    .select()
+    .single();
 
   if (analysisError || !analysis) {
     console.error(
@@ -62,17 +73,23 @@ export async function createJobAnalysis(formData: FormData) {
     );
   }
 
-  const { data: profile, error: profileError } =
-    await supabase
-      .from("profiles")
-      .select(`
-        job_title,
-        preferred_job_title,
-        career_goal,
-        skills
-      `)
-      .eq("id", user.id)
-      .single();
+  // ======================================================
+  // LOAD PROFILE
+  // ======================================================
+
+  const {
+    data: profile,
+    error: profileError,
+  } = await supabase
+    .from("profiles")
+    .select(`
+      job_title,
+      preferred_job_title,
+      career_goal,
+      skills
+    `)
+    .eq("id", user.id)
+    .single();
 
   if (profileError) {
     console.error(
@@ -88,10 +105,18 @@ export async function createJobAnalysis(formData: FormData) {
     ${(profile?.skills ?? []).join(" ")}
   `;
 
+  // ======================================================
+  // ANALYZE MATCH
+  // ======================================================
+
   const result = analyzeJobMatch(
     jobDescription.trim(),
     profileText
   );
+
+  // ======================================================
+  // SAVE ANALYSIS RESULT
+  // ======================================================
 
   const { error: resultError } = await supabase
     .from("job_analysis_results")
@@ -110,6 +135,10 @@ export async function createJobAnalysis(formData: FormData) {
       resultError
     );
   }
+
+  // ======================================================
+  // UPDATE ANALYSIS
+  // ======================================================
 
   const { error: updateError } = await supabase
     .from("job_analyses")
@@ -190,6 +219,8 @@ ${experience.description ?? ""}
 
 // ======================================================
 // GENERATE TAILORED RESUME WITH GEMINI
+// COST: 10 CREDITS
+// RATE LIMIT: 3 AI GENERATIONS / 60 SECONDS
 // ======================================================
 
 export async function generateTailoredResume(
@@ -212,20 +243,88 @@ export async function generateTailoredResume(
     redirect("/dashboard/apply");
   }
 
-  // Get job analysis
-  const { data: analysis, error: analysisError } =
-    await supabase
-      .from("job_analyses")
-      .select(`
-        id,
-        company_name,
-        job_title,
-        job_description,
-        match_score
-      `)
-      .eq("id", analysisId)
-      .eq("user_id", user.id)
-      .single();
+  // ======================================================
+  // CHECK CREDITS BEFORE GEMINI
+  // ======================================================
+
+  const {
+    data: creditProfile,
+    error: creditProfileError,
+  } = await supabase
+    .from("profiles")
+    .select("credits")
+    .eq("id", user.id)
+    .single();
+
+  if (creditProfileError || !creditProfile) {
+    console.error(
+      "Error loading user credits:",
+      creditProfileError
+    );
+
+    redirect(
+      `/dashboard/apply/${analysisId}?error=credits_check_failed`
+    );
+  }
+
+  if (creditProfile.credits < 10) {
+    redirect(
+      `/dashboard/apply/${analysisId}?error=insufficient_credits`
+    );
+  }
+
+  // ======================================================
+  // RATE LIMIT BEFORE GEMINI
+  // ======================================================
+
+  const {
+    data: rateLimitAllowed,
+    error: rateLimitError,
+  } = await supabase.rpc(
+    "check_ai_rate_limit",
+    {
+      p_action_type: "resume",
+      p_limit: 3,
+      p_window_seconds: 60,
+    }
+  );
+
+  if (rateLimitError) {
+    console.error(
+      "Error checking AI rate limit:",
+      rateLimitError
+    );
+
+    redirect(
+      `/dashboard/apply/${analysisId}?error=rate_limit_check_failed`
+    );
+  }
+
+  if (!rateLimitAllowed) {
+    redirect(
+      `/dashboard/apply/${analysisId}?error=rate_limit_exceeded`
+    );
+  }
+
+  // ======================================================
+  // GET JOB ANALYSIS
+  // ======================================================
+
+  const {
+    data: analysis,
+    error: analysisError,
+  } = await supabase
+    .from("job_analyses")
+    .select(`
+      id,
+      company_name,
+      job_title,
+      job_description,
+      match_score
+    `)
+    .eq("id", analysisId)
+    .eq("user_id", user.id)
+    .single();
 
   if (analysisError || !analysis) {
     console.error(
@@ -238,19 +337,24 @@ export async function generateTailoredResume(
     );
   }
 
-  // Get match result
-  const { data: analysisResult, error: resultError } =
-    await supabase
-      .from("job_analysis_results")
-      .select(`
-        match_score,
-        matched_skills,
-        missing_skills,
-        recommendations
-      `)
-      .eq("analysis_id", analysisId)
-      .eq("user_id", user.id)
-      .maybeSingle();
+  // ======================================================
+  // GET MATCH RESULT
+  // ======================================================
+
+  const {
+    data: analysisResult,
+    error: resultError,
+  } = await supabase
+    .from("job_analysis_results")
+    .select(`
+      match_score,
+      matched_skills,
+      missing_skills,
+      recommendations
+    `)
+    .eq("analysis_id", analysisId)
+    .eq("user_id", user.id)
+    .maybeSingle();
 
   if (resultError) {
     console.error(
@@ -259,22 +363,27 @@ export async function generateTailoredResume(
     );
   }
 
-  // Get user profile
-  const { data: profile, error: profileError } =
-    await supabase
-      .from("profiles")
-      .select(`
-        full_name,
-        job_title,
-        location,
-        years_experience,
-        preferred_job_title,
-        linkedin_url,
-        career_goal,
-        skills
-      `)
-      .eq("id", user.id)
-      .single();
+  // ======================================================
+  // GET USER PROFILE
+  // ======================================================
+
+  const {
+    data: profile,
+    error: profileError,
+  } = await supabase
+    .from("profiles")
+    .select(`
+      full_name,
+      job_title,
+      location,
+      years_experience,
+      preferred_job_title,
+      linkedin_url,
+      career_goal,
+      skills
+    `)
+    .eq("id", user.id)
+    .single();
 
   if (profileError || !profile) {
     console.error(
@@ -287,7 +396,10 @@ export async function generateTailoredResume(
     );
   }
 
-  // Get professional experience
+  // ======================================================
+  // GET PROFESSIONAL EXPERIENCE
+  // ======================================================
+
   const {
     data: experiences,
     error: experiencesError,
@@ -314,18 +426,26 @@ export async function generateTailoredResume(
     );
   }
 
+  // ======================================================
+  // PREPARE DATA
+  // ======================================================
+
   const profileSkills =
     Array.isArray(profile.skills)
       ? profile.skills.join(", ")
       : "";
 
   const matchedSkills =
-    Array.isArray(analysisResult?.matched_skills)
+    Array.isArray(
+      analysisResult?.matched_skills
+    )
       ? analysisResult.matched_skills.join(", ")
       : "";
 
   const missingSkills =
-    Array.isArray(analysisResult?.missing_skills)
+    Array.isArray(
+      analysisResult?.missing_skills
+    )
       ? analysisResult.missing_skills.join(", ")
       : "";
 
@@ -334,7 +454,10 @@ export async function generateTailoredResume(
       experiences
     );
 
-  // Gemini prompt
+  // ======================================================
+  // RESUME PROMPT
+  // ======================================================
+
   const prompt = `
 You are a professional resume writer.
 
@@ -405,7 +528,11 @@ ${analysis.job_description}
 JOB MATCH
 
 Match score:
-${analysisResult?.match_score ?? analysis.match_score ?? 0}%
+${
+  analysisResult?.match_score ??
+  analysis.match_score ??
+  0
+}%
 
 Matching skills:
 ${matchedSkills}
@@ -418,6 +545,10 @@ Create the tailored resume now.
 
 Return only the final resume.
 `;
+
+  // ======================================================
+  // GENERATE RESUME WITH GEMINI
+  // ======================================================
 
   let resumeContent: string;
 
@@ -447,28 +578,28 @@ Return only the final resume.
     );
   }
 
-  const { error: documentError } =
-    await supabase
-      .from("generated_documents")
-      .upsert(
-        {
-          user_id: user.id,
-          analysis_id: analysisId,
-          document_type: "resume",
-          content: resumeContent,
-          updated_at:
-            new Date().toISOString(),
-        },
-        {
-          onConflict:
-            "analysis_id,document_type",
-        }
-      );
+  // ======================================================
+  // SAVE RESUME + CHARGE 10 CREDITS
+  // ======================================================
 
-  if (documentError) {
+  const {
+    data: saved,
+    error: creditError,
+  } = await supabase.rpc(
+    "save_generated_document_with_credits",
+    {
+      p_analysis_id: analysisId,
+      p_document_type: "resume",
+      p_content: resumeContent,
+      p_credit_cost: 10,
+      p_description: "Tailored Resume",
+    }
+  );
+
+  if (creditError) {
     console.error(
-      "Error saving generated resume:",
-      documentError
+      "Error saving resume / charging credits:",
+      creditError
     );
 
     redirect(
@@ -476,8 +607,18 @@ Return only the final resume.
     );
   }
 
+  if (!saved) {
+    redirect(
+      `/dashboard/apply/${analysisId}?error=insufficient_credits`
+    );
+  }
+
+  revalidatePath("/dashboard");
   revalidatePath(
     `/dashboard/apply/${analysisId}`
+  );
+  revalidatePath(
+    "/dashboard/apply/history"
   );
 
   redirect(
@@ -488,6 +629,8 @@ Return only the final resume.
 
 // ======================================================
 // GENERATE COVER LETTER WITH GEMINI
+// COST: 5 CREDITS
+// RATE LIMIT: 3 AI GENERATIONS / 60 SECONDS
 // ======================================================
 
 export async function generateCoverLetter(
@@ -510,20 +653,88 @@ export async function generateCoverLetter(
     redirect("/dashboard/apply");
   }
 
-  // Get job analysis
-  const { data: analysis, error: analysisError } =
-    await supabase
-      .from("job_analyses")
-      .select(`
-        id,
-        company_name,
-        job_title,
-        job_description,
-        match_score
-      `)
-      .eq("id", analysisId)
-      .eq("user_id", user.id)
-      .single();
+  // ======================================================
+  // CHECK CREDITS BEFORE GEMINI
+  // ======================================================
+
+  const {
+    data: creditProfile,
+    error: creditProfileError,
+  } = await supabase
+    .from("profiles")
+    .select("credits")
+    .eq("id", user.id)
+    .single();
+
+  if (creditProfileError || !creditProfile) {
+    console.error(
+      "Error loading user credits:",
+      creditProfileError
+    );
+
+    redirect(
+      `/dashboard/apply/${analysisId}?error=credits_check_failed`
+    );
+  }
+
+  if (creditProfile.credits < 5) {
+    redirect(
+      `/dashboard/apply/${analysisId}?error=insufficient_credits`
+    );
+  }
+
+  // ======================================================
+  // RATE LIMIT BEFORE GEMINI
+  // ======================================================
+
+  const {
+    data: rateLimitAllowed,
+    error: rateLimitError,
+  } = await supabase.rpc(
+    "check_ai_rate_limit",
+    {
+      p_action_type: "cover_letter",
+      p_limit: 3,
+      p_window_seconds: 60,
+    }
+  );
+
+  if (rateLimitError) {
+    console.error(
+      "Error checking AI rate limit:",
+      rateLimitError
+    );
+
+    redirect(
+      `/dashboard/apply/${analysisId}?error=rate_limit_check_failed`
+    );
+  }
+
+  if (!rateLimitAllowed) {
+    redirect(
+      `/dashboard/apply/${analysisId}?error=rate_limit_exceeded`
+    );
+  }
+
+  // ======================================================
+  // GET JOB ANALYSIS
+  // ======================================================
+
+  const {
+    data: analysis,
+    error: analysisError,
+  } = await supabase
+    .from("job_analyses")
+    .select(`
+      id,
+      company_name,
+      job_title,
+      job_description,
+      match_score
+    `)
+    .eq("id", analysisId)
+    .eq("user_id", user.id)
+    .single();
 
   if (analysisError || !analysis) {
     console.error(
@@ -536,7 +747,10 @@ export async function generateCoverLetter(
     );
   }
 
-  // Get job match
+  // ======================================================
+  // GET JOB MATCH
+  // ======================================================
+
   const {
     data: analysisResult,
     error: resultError,
@@ -558,7 +772,10 @@ export async function generateCoverLetter(
     );
   }
 
-  // Get profile
+  // ======================================================
+  // GET PROFILE
+  // ======================================================
+
   const {
     data: profile,
     error: profileError,
@@ -570,6 +787,7 @@ export async function generateCoverLetter(
       location,
       years_experience,
       preferred_job_title,
+      linkedin_url,
       career_goal,
       skills
     `)
@@ -587,7 +805,10 @@ export async function generateCoverLetter(
     );
   }
 
-  // Get professional experience
+  // ======================================================
+  // GET PROFESSIONAL EXPERIENCE
+  // ======================================================
+
   const {
     data: experiences,
     error: experiencesError,
@@ -614,18 +835,26 @@ export async function generateCoverLetter(
     );
   }
 
+  // ======================================================
+  // PREPARE DATA
+  // ======================================================
+
   const profileSkills =
     Array.isArray(profile.skills)
       ? profile.skills.join(", ")
       : "";
 
   const matchedSkills =
-    Array.isArray(analysisResult?.matched_skills)
+    Array.isArray(
+      analysisResult?.matched_skills
+    )
       ? analysisResult.matched_skills.join(", ")
       : "";
 
   const missingSkills =
-    Array.isArray(analysisResult?.missing_skills)
+    Array.isArray(
+      analysisResult?.missing_skills
+    )
       ? analysisResult.missing_skills.join(", ")
       : "";
 
@@ -634,7 +863,10 @@ export async function generateCoverLetter(
       experiences
     );
 
-  // Gemini prompt
+  // ======================================================
+  // COVER LETTER PROMPT
+  // ======================================================
+
   const prompt = `
 You are an expert professional cover letter writer.
 
@@ -656,8 +888,18 @@ IMPORTANT RULES:
 - Do not use markdown.
 - Do not use bullet points.
 - Do not use emojis.
-- Do not include fake addresses, phone numbers, emails, dates, or hiring manager names.
-- If the hiring manager's name is unknown, start with "Dear Hiring Manager,".
+
+- Start the cover letter with the candidate's full name.
+- On the following line, include the candidate's location if available.
+- On the following line, include the candidate's LinkedIn URL if available.
+- Add a blank line after the candidate information.
+- Then begin the letter with "Dear Hiring Manager,".
+
+- Do not invent a date.
+- Do not invent a street address.
+- Do not invent a phone number.
+- Do not invent an email address.
+- Do not invent a hiring manager name.
 - If candidate information is missing, omit it instead of inventing information.
 
 
@@ -671,6 +913,9 @@ ${profile.job_title ?? ""}
 
 Location:
 ${profile.location ?? ""}
+
+LinkedIn:
+${profile.linkedin_url ?? ""}
 
 Years of Experience:
 ${profile.years_experience ?? ""}
@@ -705,7 +950,11 @@ ${analysis.job_description}
 JOB MATCH INFORMATION
 
 Match Score:
-${analysisResult?.match_score ?? analysis.match_score ?? 0}%
+${
+  analysisResult?.match_score ??
+  analysis.match_score ??
+  0
+}%
 
 Matching Skills:
 ${matchedSkills}
@@ -718,6 +967,10 @@ Write the final cover letter now.
 
 Return only the cover letter itself.
 `;
+
+  // ======================================================
+  // GENERATE COVER LETTER WITH GEMINI
+  // ======================================================
 
   let coverLetterContent: string;
 
@@ -747,30 +1000,28 @@ Return only the cover letter itself.
     );
   }
 
-  const { error: documentError } =
-    await supabase
-      .from("generated_documents")
-      .upsert(
-        {
-          user_id: user.id,
-          analysis_id: analysisId,
-          document_type:
-            "cover_letter",
-          content:
-            coverLetterContent,
-          updated_at:
-            new Date().toISOString(),
-        },
-        {
-          onConflict:
-            "analysis_id,document_type",
-        }
-      );
+  // ======================================================
+  // SAVE COVER LETTER + CHARGE 5 CREDITS
+  // ======================================================
 
-  if (documentError) {
+  const {
+    data: saved,
+    error: creditError,
+  } = await supabase.rpc(
+    "save_generated_document_with_credits",
+    {
+      p_analysis_id: analysisId,
+      p_document_type: "cover_letter",
+      p_content: coverLetterContent,
+      p_credit_cost: 5,
+      p_description: "Cover Letter",
+    }
+  );
+
+  if (creditError) {
     console.error(
-      "Error saving generated cover letter:",
-      documentError
+      "Error saving cover letter / charging credits:",
+      creditError
     );
 
     redirect(
@@ -778,8 +1029,18 @@ Return only the cover letter itself.
     );
   }
 
+  if (!saved) {
+    redirect(
+      `/dashboard/apply/${analysisId}?error=insufficient_credits`
+    );
+  }
+
+  revalidatePath("/dashboard");
   revalidatePath(
     `/dashboard/apply/${analysisId}`
+  );
+  revalidatePath(
+    "/dashboard/apply/history"
   );
 
   redirect(
@@ -787,7 +1048,14 @@ Return only the cover letter itself.
   );
 }
 
-export async function deleteGeneratedDocument(formData: FormData) {
+
+// ======================================================
+// DELETE GENERATED DOCUMENT
+// ======================================================
+
+export async function deleteGeneratedDocument(
+  formData: FormData
+) {
   const supabase = await createClient();
 
   const {
@@ -798,8 +1066,11 @@ export async function deleteGeneratedDocument(formData: FormData) {
     redirect("/login");
   }
 
-  const documentId = formData.get("documentId") as string;
-  const analysisId = formData.get("analysisId") as string;
+  const documentId =
+    formData.get("documentId") as string;
+
+  const analysisId =
+    formData.get("analysisId") as string;
 
   if (!documentId || !analysisId) {
     redirect("/dashboard/apply");
@@ -812,14 +1083,25 @@ export async function deleteGeneratedDocument(formData: FormData) {
     .eq("user_id", user.id);
 
   if (error) {
-    console.error("Error deleting generated document:", error);
+    console.error(
+      "Error deleting generated document:",
+      error
+    );
 
     redirect(
       `/dashboard/apply/${analysisId}?error=document_delete_failed`
     );
   }
 
-  revalidatePath(`/dashboard/apply/${analysisId}`);
+  revalidatePath("/dashboard");
+
+  revalidatePath(
+    `/dashboard/apply/${analysisId}`
+  );
+
+  revalidatePath(
+    "/dashboard/apply/history"
+  );
 
   redirect(
     `/dashboard/apply/${analysisId}?success=document_deleted`
