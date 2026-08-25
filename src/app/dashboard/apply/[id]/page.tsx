@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 
 import {
-  Sparkles,
   FileText,
   Mail,
   CheckCircle2,
@@ -16,31 +15,71 @@ import {
 } from "../actions";
 
 import GeneratedDocumentActions from "@/components/apply/GeneratedDocumentActions";
+import RateLimitNotice from "@/components/apply/RateLimitNotice";
+import ResumePreview from "@/components/apply/ResumePreview";
+import CoverLetterPreview from "@/components/apply/CoverLetterPreview";
 
 export default async function ApplyResultPage({
   params,
+  searchParams,
 }: {
   params: Promise<{
     id: string;
   }>;
+
+  searchParams: Promise<{
+    success?: string;
+    error?: string;
+  }>;
 }) {
   const { id } = await params;
 
-  const supabase = await createClient();
+  const { error: pageError } =
+    await searchParams;
+
+  const supabase =
+    await createClient();
 
   const {
     data: { user },
-  } = await supabase.auth.getUser();
+  } =
+    await supabase.auth.getUser();
 
   if (!user) {
     redirect("/login");
   }
 
   // ==========================================
+  // USER CREDITS
+  // ==========================================
+
+  const { data: creditProfile } =
+    await supabase
+      .from("profiles")
+      .select("credits")
+      .eq("id", user.id)
+      .single();
+
+  const credits =
+    creditProfile?.credits ?? 0;
+
+  const canGenerateResume =
+    credits >= 10;
+
+  const canGenerateCoverLetter =
+    credits >= 5;
+
+  const isRateLimited =
+    pageError === "rate_limit_exceeded";
+
+  // ==========================================
   // JOB ANALYSIS
   // ==========================================
 
-  const { data: analysis, error } = await supabase
+  const {
+    data: analysis,
+    error,
+  } = await supabase
     .from("job_analyses")
     .select(`
       id,
@@ -63,23 +102,26 @@ export default async function ApplyResultPage({
   // ANALYSIS RESULT
   // ==========================================
 
-  const { data: result } = await supabase
-    .from("job_analysis_results")
-    .select(`
-      match_score,
-      matched_skills,
-      missing_skills,
-      recommendations
-    `)
-    .eq("analysis_id", id)
-    .eq("user_id", user.id)
-    .maybeSingle();
+  const { data: result } =
+    await supabase
+      .from("job_analysis_results")
+      .select(`
+        match_score,
+        matched_skills,
+        missing_skills,
+        recommendations
+      `)
+      .eq("analysis_id", id)
+      .eq("user_id", user.id)
+      .maybeSingle();
 
   // ==========================================
   // GENERATED RESUME
   // ==========================================
 
-  const { data: generatedResume } = await supabase
+  const {
+    data: generatedResume,
+  } = await supabase
     .from("generated_documents")
     .select(`
       id,
@@ -95,7 +137,9 @@ export default async function ApplyResultPage({
   // GENERATED COVER LETTER
   // ==========================================
 
-  const { data: generatedCoverLetter } = await supabase
+  const {
+    data: generatedCoverLetter,
+  } = await supabase
     .from("generated_documents")
     .select(`
       id,
@@ -108,8 +152,8 @@ export default async function ApplyResultPage({
     .maybeSingle();
 
   return (
-    <div className="p-8">
-      <div className="max-w-5xl">
+    <div className="p-4 sm:p-6 lg:p-8">
+      <div className="w-full max-w-6xl">
 
         {/* ======================================
             HEADER
@@ -119,39 +163,82 @@ export default async function ApplyResultPage({
           Apply Copilot
         </p>
 
-        <h1 className="mt-2 text-4xl font-bold text-slate-900">
+        <h1 className="mt-2 text-3xl font-bold text-slate-900 sm:text-4xl">
           {analysis.job_title || "Job Analysis"}
         </h1>
 
-        <p className="mt-2 text-lg text-slate-500">
+        <p className="mt-2 text-base text-slate-500 sm:text-lg">
           {analysis.company_name || "Company"}
         </p>
+
+        {/* ======================================
+            CREDIT ERRORS
+        ====================================== */}
+
+        {pageError === "insufficient_credits" && (
+          <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 px-5 py-4">
+            <p className="font-semibold text-amber-900">
+              Not enough credits
+            </p>
+
+            <p className="mt-1 text-sm text-amber-700">
+              Your current balance is {credits} credits. A tailored resume
+              costs 10 credits and a cover letter costs 5 credits.
+            </p>
+          </div>
+        )}
+
+        {pageError === "credits_check_failed" && (
+          <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4">
+            <p className="font-semibold text-red-900">
+              We couldn&apos;t verify your credits
+            </p>
+
+            <p className="mt-1 text-sm text-red-700">
+              Please try again.
+            </p>
+          </div>
+        )}
+
+        {/* ======================================
+            RATE LIMIT
+        ====================================== */}
+
+        {pageError === "rate_limit_exceeded" && (
+          <RateLimitNotice seconds={60} />
+        )}
+
+        {pageError === "rate_limit_check_failed" && (
+          <div className="mt-6 rounded-2xl border border-red-200 bg-red-50 px-5 py-4">
+            <p className="font-semibold text-red-900">
+              We couldn&apos;t verify the generation limit
+            </p>
+
+            <p className="mt-1 text-sm text-red-700">
+              Please try again.
+            </p>
+          </div>
+        )}
 
         {/* ======================================
             ANALYSIS STATUS
         ====================================== */}
 
-        <div className="mt-8 flex items-center gap-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-white text-emerald-700">
-            <Sparkles className="h-5 w-5" />
-          </div>
+        <div className="mt-8 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+          <p className="font-semibold text-emerald-900">
+            Analysis Ready
+          </p>
 
-          <div>
-            <p className="font-semibold text-emerald-900">
-              Analysis Ready
-            </p>
-
-            <p className="text-sm text-emerald-700">
-              Your job match analysis has been created.
-            </p>
-          </div>
+          <p className="mt-1 text-sm text-emerald-700">
+            Your job match analysis has been created.
+          </p>
         </div>
 
         {/* ======================================
             STATS
         ====================================== */}
 
-        <div className="mt-8 grid grid-cols-3 gap-5">
+        <div className="mt-8 grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5">
 
           {/* Match Score */}
 
@@ -221,12 +308,12 @@ export default async function ApplyResultPage({
             JOB DESCRIPTION
         ====================================== */}
 
-        <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-8">
+        <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 lg:p-8">
           <h2 className="text-xl font-bold text-slate-900">
             Job Description
           </h2>
 
-          <p className="mt-4 whitespace-pre-line text-sm leading-7 text-slate-600">
+          <p className="mt-4 whitespace-pre-line break-words text-sm leading-7 text-slate-600">
             {analysis.job_description}
           </p>
         </section>
@@ -235,14 +322,14 @@ export default async function ApplyResultPage({
             SKILLS ANALYSIS
         ====================================== */}
 
-        <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-8">
+        <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 lg:p-8">
+
           <h2 className="flex items-center gap-2 text-xl font-bold text-slate-900">
             <CheckCircle2 className="h-5 w-5 text-emerald-700" />
-
             Skills Analysis
           </h2>
 
-          <div className="mt-5 grid grid-cols-2 gap-4">
+          <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
 
             {/* Matching Skills */}
 
@@ -295,8 +382,6 @@ export default async function ApplyResultPage({
             </div>
           </div>
 
-          {/* Recommendations */}
-
           {result?.recommendations && (
             <div className="mt-5 rounded-2xl border border-slate-200 p-5">
               <p className="font-semibold text-slate-900">
@@ -315,9 +400,9 @@ export default async function ApplyResultPage({
         ====================================== */}
 
         {generatedResume && (
-          <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-8">
+          <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 lg:p-8">
 
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
 
               <div>
                 <p className="text-sm font-medium uppercase tracking-wide text-slate-400">
@@ -329,18 +414,15 @@ export default async function ApplyResultPage({
                 </h2>
               </div>
 
-              <div className="flex items-center gap-2">
-
-                {/* Copy + Download */}
+              <div className="flex flex-wrap items-center gap-2">
 
                 <GeneratedDocumentActions
                   content={generatedResume.content}
                   fileName={`${
                     analysis.job_title || "tailored"
                   }-resume`}
+                  documentType="resume"
                 />
-
-                {/* Delete */}
 
                 <form action={deleteGeneratedDocument}>
                   <input
@@ -370,11 +452,14 @@ export default async function ApplyResultPage({
               </div>
             </div>
 
-            <div className="mt-6 rounded-2xl bg-slate-50 p-6">
-              <pre className="whitespace-pre-wrap font-sans text-sm leading-7 text-slate-700">
-                {generatedResume.content}
-              </pre>
+            {/* RESUME PREVIEW */}
+
+            <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 p-2 sm:p-4 lg:p-6">
+              <ResumePreview
+                content={generatedResume.content}
+              />
             </div>
+
           </section>
         )}
 
@@ -383,9 +468,9 @@ export default async function ApplyResultPage({
         ====================================== */}
 
         {generatedCoverLetter && (
-          <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-8">
+          <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 lg:p-8">
 
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
 
               <div>
                 <p className="text-sm font-medium uppercase tracking-wide text-slate-400">
@@ -397,18 +482,15 @@ export default async function ApplyResultPage({
                 </h2>
               </div>
 
-              <div className="flex items-center gap-2">
-
-                {/* Copy + Download */}
+              <div className="flex flex-wrap items-center gap-2">
 
                 <GeneratedDocumentActions
                   content={generatedCoverLetter.content}
                   fileName={`${
                     analysis.job_title || "job"
                   }-cover-letter`}
+                  documentType="cover_letter"
                 />
-
-                {/* Delete */}
 
                 <form action={deleteGeneratedDocument}>
                   <input
@@ -438,19 +520,22 @@ export default async function ApplyResultPage({
               </div>
             </div>
 
-            <div className="mt-6 rounded-2xl bg-slate-50 p-6">
-              <pre className="whitespace-pre-wrap font-sans text-sm leading-7 text-slate-700">
-                {generatedCoverLetter.content}
-              </pre>
+            {/* COVER LETTER PREVIEW */}
+
+            <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 p-2 sm:p-4 lg:p-6">
+              <CoverLetterPreview
+                content={generatedCoverLetter.content}
+              />
             </div>
+
           </section>
         )}
 
         {/* ======================================
-            ACTIONS
+            GENERATION ACTIONS
         ====================================== */}
 
-        <div className="mt-8 flex gap-4">
+        <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:gap-4">
 
           {/* Resume */}
 
@@ -463,11 +548,22 @@ export default async function ApplyResultPage({
 
             <button
               type="submit"
-              className="rounded-xl bg-emerald-700 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800"
+              disabled={
+                !canGenerateResume ||
+                isRateLimited
+              }
+              className={`w-full rounded-xl px-6 py-3 text-sm font-semibold transition sm:w-auto ${
+                canGenerateResume &&
+                !isRateLimited
+                  ? "bg-emerald-700 text-white hover:bg-emerald-800"
+                  : "cursor-not-allowed bg-slate-200 text-slate-400"
+              }`}
             >
-              {generatedResume
-                ? "Regenerate Resume →"
-                : "Generate Tailored Resume →"}
+              {isRateLimited
+                ? "Try again shortly"
+                : generatedResume
+                  ? "Regenerate Resume · 10 credits"
+                  : "Generate Resume · 10 credits"}
             </button>
           </form>
 
@@ -482,15 +578,34 @@ export default async function ApplyResultPage({
 
             <button
               type="submit"
-              className="rounded-xl border border-slate-200 bg-white px-6 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              disabled={
+                !canGenerateCoverLetter ||
+                isRateLimited
+              }
+              className={`w-full rounded-xl border px-6 py-3 text-sm font-semibold transition sm:w-auto ${
+                canGenerateCoverLetter &&
+                !isRateLimited
+                  ? "border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
+                  : "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
+              }`}
             >
-              {generatedCoverLetter
-                ? "Regenerate Cover Letter →"
-                : "Generate Cover Letter →"}
+              {isRateLimited
+                ? "Try again shortly"
+                : generatedCoverLetter
+                  ? "Regenerate Cover Letter · 5 credits"
+                  : "Generate Cover Letter · 5 credits"}
             </button>
           </form>
 
         </div>
+
+        {/* ======================================
+            CURRENT BALANCE
+        ====================================== */}
+
+        <p className="mt-3 text-xs text-slate-400">
+          Current balance: {credits} credits
+        </p>
 
       </div>
     </div>
