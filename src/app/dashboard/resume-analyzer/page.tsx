@@ -1,6 +1,5 @@
 import { redirect } from "next/navigation";
 import {
-  FileText,
   Upload,
   CheckCircle2,
 } from "lucide-react";
