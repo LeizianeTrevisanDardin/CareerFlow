@@ -43,6 +43,31 @@ export default async function BillingPage({
     .eq("id", user.id)
     .single();
 
+  const {
+  data: purchases,
+  error: purchasesError,
+} = await supabase
+  .from("stripe_credit_purchases")
+  .select(`
+    id,
+    package_id,
+    credits,
+    amount_total,
+    currency,
+    created_at
+  `)
+  .eq("user_id", user.id)
+  .order("created_at", {
+    ascending: false,
+  });
+
+if (purchasesError) {
+  console.error(
+    "Error loading purchase history:",
+    purchasesError
+  );
+}
+
   return (
     <div className="p-4 sm:p-6 lg:p-8">
       <div className="w-full max-w-6xl">
@@ -222,6 +247,129 @@ export default async function BillingPage({
             <Feature text="Apply Copilot" />
 
           </div>
+
+        </section>
+
+        {/* PURCHASE HISTORY */}
+
+    <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 lg:p-8">
+
+    <div>
+        <p className="text-sm font-medium uppercase tracking-wide text-slate-400">
+        Purchase History
+        </p>
+
+        <h2 className="mt-1 text-2xl font-bold text-slate-900">
+        Your credit purchases
+        </h2>
+
+        <p className="mt-2 text-sm text-slate-500">
+        Review your previous Careerflow credit purchases.
+        </p>
+    </div>
+
+    {purchases && purchases.length > 0 ? (
+        <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200">
+
+        <div className="hidden grid-cols-4 gap-4 bg-slate-50 px-5 py-3 text-xs font-semibold uppercase tracking-wide text-slate-400 sm:grid">
+            <span>Package</span>
+            <span>Credits</span>
+            <span>Amount</span>
+            <span>Date</span>
+        </div>
+
+        <div className="divide-y divide-slate-200">
+
+            {purchases.map((purchase) => {
+            const packageName =
+                purchase.package_id === "starter"
+                ? "Starter"
+                : purchase.package_id === "plus"
+                ? "Plus"
+                : purchase.package_id === "pro"
+                ? "Pro"
+                : purchase.package_id;
+
+          const amount =
+            purchase.amount_total !== null
+              ? (
+                  purchase.amount_total / 100
+                ).toFixed(2)
+              : "0.00";
+
+          const currency =
+            (
+              purchase.currency ||
+              "cad"
+            ).toUpperCase();
+
+          return (
+            <div
+              key={purchase.id}
+              className="grid grid-cols-1 gap-3 px-5 py-4 sm:grid-cols-4 sm:items-center sm:gap-4"
+            >
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400 sm:hidden">
+                  Package
+                </p>
+
+                <p className="font-semibold text-slate-900">
+                  {packageName}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400 sm:hidden">
+                  Credits
+                </p>
+
+                <p className="text-sm font-semibold text-emerald-700">
+                  +{purchase.credits}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400 sm:hidden">
+                  Amount
+                </p>
+
+                <p className="text-sm text-slate-700">
+                  ${amount} {currency}
+                </p>
+              </div>
+
+              <div>
+                <p className="text-xs font-medium uppercase tracking-wide text-slate-400 sm:hidden">
+                  Date
+                </p>
+
+                <p className="text-sm text-slate-500">
+                  {new Date(
+                    purchase.created_at
+                  ).toLocaleDateString(
+                    "en-CA",
+                    {
+                      year: "numeric",
+                      month: "short",
+                      day: "numeric",
+                    }
+                  )}
+                </p>
+              </div>
+            </div>
+          );
+        })}
+
+      </div>
+
+    </div>
+        ) : (
+            <div className="mt-6 rounded-2xl bg-slate-50 p-5">
+            <p className="text-sm text-slate-500">
+                You haven&apos;t purchased any credits yet.
+            </p>
+            </div>
+        )}
 
         </section>
 
