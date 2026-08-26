@@ -1,9 +1,111 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+
+// ======================================================
+// UPDATE PROFILE
+// ======================================================
+
+export async function updateProfile(
+  formData: FormData
+) {
+  const supabase =
+    await createClient();
+
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (
+    userError ||
+    !user
+  ) {
+    redirect("/login");
+  }
+
+  const fullName =
+    (
+      formData.get(
+        "fullName"
+      ) as string
+    )?.trim();
+
+  const jobTitle =
+    (
+      formData.get(
+        "jobTitle"
+      ) as string
+    )?.trim();
+
+  // ==========================================
+  // VALIDATION
+  // ==========================================
+
+  if (!fullName) {
+    redirect(
+      "/dashboard/settings?error=profile_missing_name"
+    );
+  }
+
+  // ==========================================
+  // UPDATE PROFILE
+  // ==========================================
+
+  const {
+    error: updateError,
+  } = await supabase
+    .from("profiles")
+    .update({
+      full_name:
+        fullName,
+
+      job_title:
+        jobTitle || null,
+
+      updated_at:
+        new Date().toISOString(),
+    })
+    .eq(
+      "id",
+      user.id
+    );
+
+  if (updateError) {
+    console.error(
+      "Profile update error:",
+      updateError
+    );
+
+    redirect(
+      "/dashboard/settings?error=profile_update_failed"
+    );
+  }
+
+  // ==========================================
+  // REFRESH PAGES
+  // ==========================================
+
+  revalidatePath(
+    "/dashboard/settings"
+  );
+
+  revalidatePath(
+    "/dashboard"
+  );
+
+  // ==========================================
+  // SUCCESS
+  // ==========================================
+
+  redirect(
+    "/dashboard/settings?success=profile_updated"
+  );
+}
 
 // ======================================================
 // SEND PASSWORD RESET
@@ -86,6 +188,10 @@ export async function deleteAccount(
       ?.trim()
       .toUpperCase();
 
+  // ==========================================
+  // CONFIRM DELETE
+  // ==========================================
+
   if (
     confirmation !== "DELETE"
   ) {
@@ -93,6 +199,10 @@ export async function deleteAccount(
       "/dashboard/settings?error=delete_confirmation"
     );
   }
+
+  // ==========================================
+  // CURRENT USER
+  // ==========================================
 
   const supabase =
     await createClient();
@@ -112,8 +222,16 @@ export async function deleteAccount(
   const userId =
     user.id;
 
+  // ==========================================
+  // ADMIN CLIENT
+  // ==========================================
+
   const admin =
     createAdminClient();
+
+  // ==========================================
+  // DELETE AUTH USER
+  // ==========================================
 
   const {
     error: deleteError,
@@ -133,6 +251,10 @@ export async function deleteAccount(
     );
   }
 
+  // ==========================================
+  // SIGN OUT
+  // ==========================================
+
   try {
     await supabase.auth.signOut();
   } catch (error) {
@@ -141,6 +263,10 @@ export async function deleteAccount(
       error
     );
   }
+
+  // ==========================================
+  // REDIRECT
+  // ==========================================
 
   redirect(
     "/login?success=account_deleted"

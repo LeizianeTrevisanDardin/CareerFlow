@@ -11,7 +11,9 @@ import {
 import {
   deleteAccount,
   sendPasswordReset,
+  updateProfile,
 } from "./actions";
+
 import { createClient } from "@/lib/supabase/server";
 
 
@@ -120,64 +122,136 @@ export default async function SettingsPage({
         )}
 
         {/* ======================================
-            ACCOUNT
-        ====================================== */}
+                ACCOUNT
+            ====================================== */}
 
-        <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 lg:p-8">
+            <section className="mt-8 rounded-3xl border border-slate-200 bg-white p-5 sm:p-6 lg:p-8">
 
-          <div className="flex items-start gap-4">
+            <div className="flex items-start gap-4">
 
-            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100">
-              <UserRound className="h-5 w-5 text-slate-700" />
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-slate-100">
+                <UserRound className="h-5 w-5 text-slate-700" />
+                </div>
+
+                <div>
+                <h2 className="text-xl font-bold text-slate-900">
+                    Account information
+                </h2>
+
+                <p className="mt-1 text-sm text-slate-500">
+                    Update your basic Careerflow profile information.
+                </p>
+                </div>
+
             </div>
 
-            <div>
-              <h2 className="text-xl font-bold text-slate-900">
-                Account information
-              </h2>
+            <form
+                action={updateProfile}
+                className="mt-6"
+            >
 
-              <p className="mt-1 text-sm text-slate-500">
-                Basic information associated with your Careerflow account.
-              </p>
-            </div>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 
-          </div>
+                {/* NAME */}
 
-          <div className="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="rounded-2xl bg-slate-50 p-4">
 
-            <InfoField
-              label="Name"
-              value={
-                profile?.full_name ||
-                "Not provided"
-              }
-            />
+                    <label
+                    htmlFor="fullName"
+                    className="text-xs font-medium uppercase tracking-wide text-slate-400"
+                    >
+                    Name
+                    </label>
 
-            <InfoField
-              label="Job title"
-              value={
-                profile?.job_title ||
-                "Not provided"
-              }
-            />
+                    <input
+                    id="fullName"
+                    name="fullName"
+                    type="text"
+                    required
+                    defaultValue={
+                        profile?.full_name ?? ""
+                    }
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none transition focus:border-emerald-500"
+                    />
 
-            <InfoField
-              label="Email"
-              value={
-                user.email ||
-                "Not available"
-              }
-            />
+                </div>
 
-            <InfoField
-              label="Credits"
-              value={`${profile?.credits ?? 0}`}
-            />
+                {/* JOB TITLE */}
 
-          </div>
+                <div className="rounded-2xl bg-slate-50 p-4">
 
-        </section>
+                    <label
+                    htmlFor="jobTitle"
+                    className="text-xs font-medium uppercase tracking-wide text-slate-400"
+                    >
+                    Job title
+                    </label>
 
+                    <input
+                    id="jobTitle"
+                    name="jobTitle"
+                    type="text"
+                    defaultValue={
+                        profile?.job_title ?? ""
+                    }
+                    placeholder="e.g. Software Developer"
+                    className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-semibold text-slate-800 outline-none transition placeholder:text-slate-300 focus:border-emerald-500"
+                    />
+
+                </div>
+
+                {/* EMAIL */}
+
+                <div className="rounded-2xl bg-slate-50 p-4">
+
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                    Email
+                    </p>
+
+                    <p className="mt-2 break-words text-sm font-semibold text-slate-800">
+                    {user.email || "Not available"}
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-400">
+                    Email changes are not available yet.
+                    </p>
+
+                </div>
+
+                {/* CREDITS */}
+
+                <div className="rounded-2xl bg-slate-50 p-4">
+
+                    <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
+                    Credits
+                    </p>
+
+                    <p className="mt-2 text-sm font-semibold text-slate-800">
+                    {profile?.credits ?? 0}
+                    </p>
+
+                    <p className="mt-1 text-xs text-slate-400">
+                    Credits are managed through Billing.
+                    </p>
+
+                </div>
+
+                </div>
+
+                <div className="mt-5 flex justify-end">
+
+                <button
+                    type="submit"
+                    className="rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800"
+                >
+                    Save Changes
+                </button>
+
+                </div>
+
+            </form>
+
+            </section>
         {/* ======================================
             BILLING
         ====================================== */}
