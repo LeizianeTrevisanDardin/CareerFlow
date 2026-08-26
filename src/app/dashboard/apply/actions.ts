@@ -889,6 +889,14 @@ IMPORTANT RULES:
 - Do not use bullet points.
 - Do not use emojis.
 
+- Use plain text formatting.
+- Do not use tables.
+- Do not use columns.
+- Do not use icons or decorative symbols.
+- Do not use headers or footers.
+- Keep the structure simple and easy to parse.
+- Use standard section spacing.
+
 - Start the cover letter with the candidate's full name.
 - On the following line, include the candidate's location if available.
 - On the following line, include the candidate's LinkedIn URL if available.
