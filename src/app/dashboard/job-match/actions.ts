@@ -199,6 +199,18 @@ IMPORTANT RULES:
 - Return ONLY valid JSON.
 - No markdown.
 - No explanation outside the JSON.
+- Evaluate the match using four dimensions:
+  Skills Match: 35%
+  Experience Match: 30%
+  Keywords Match: 20%
+  Role Alignment: 15%.
+- The final match_score should reflect all four dimensions.
+- Do not inflate the score when important required qualifications are missing.
+- Distinguish between required qualifications and preferred qualifications.
+- Missing required skills should reduce the score more heavily than missing preferred skills.
+- Do not penalize the candidate for requirements that are not actually stated in the job description.
+- Missing Keywords must only include meaningful ATS terms that appear in the job description and are absent from the resume.
+- Do not list generic filler words as missing keywords.
 
 Return exactly:
 
