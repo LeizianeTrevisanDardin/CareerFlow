@@ -1,6 +1,7 @@
 import Link from "next/link";
 
 import { login } from "./actions";
+import PasswordInput from "@/components/PasswordInput";
 
 type LoginPageProps = {
   searchParams: Promise<{
@@ -132,14 +133,12 @@ export default async function LoginPage({
               </Link>
             </div>
 
-            <input
+            <PasswordInput
               id="password"
               name="password"
-              type="password"
               required
               autoComplete="current-password"
               placeholder="Enter your password"
-              className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-300 focus:border-emerald-500"
             />
           </div>
 
