@@ -14,6 +14,7 @@ type AIActionButtonProps = {
   description?: string;
   helperText?: string;
   className?: string;
+  disabled?: boolean;
 };
 
 export default function AIActionButton({
