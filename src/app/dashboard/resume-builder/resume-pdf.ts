@@ -1,8 +1,15 @@
-import { jsPDF } from "jspdf";
+import {
+  jsPDF,
+} from "jspdf";
 
 import type {
   ResumeData,
 } from "./types";
+
+type PdfLinkItem = {
+  label: string;
+  url?: string;
+};
 
 export function downloadResumePdf(
   resume: ResumeData
@@ -11,8 +18,10 @@ export function downloadResumePdf(
     new jsPDF({
       orientation:
         "portrait",
+
       unit:
         "pt",
+
       format:
         "letter",
     });
@@ -23,10 +32,17 @@ export function downloadResumePdf(
   const pageHeight =
     pdf.internal.pageSize.getHeight();
 
-  const leftMargin = 48;
-  const rightMargin = 48;
-  const topMargin = 48;
-  const bottomMargin = 48;
+  const leftMargin =
+    48;
+
+  const rightMargin =
+    48;
+
+  const topMargin =
+    48;
+
+  const bottomMargin =
+    48;
 
   const usableWidth =
     pageWidth -
@@ -35,6 +51,10 @@ export function downloadResumePdf(
 
   let y =
     topMargin;
+
+  // ====================================================
+  // PAGE BREAK
+  // ====================================================
 
   function ensureSpace(
     requiredHeight: number
@@ -46,13 +66,21 @@ export function downloadResumePdf(
         bottomMargin
     ) {
       pdf.addPage();
+
       y =
         topMargin;
     }
   }
 
+  // ====================================================
+  // RESET TEXT
+  // ====================================================
+
   function resetText() {
-    pdf.setCharSpace(0);
+    pdf.setCharSpace(
+      0
+    );
+
     pdf.setTextColor(
       15,
       23,
@@ -60,12 +88,19 @@ export function downloadResumePdf(
     );
   }
 
+  // ====================================================
+  // SECTION TITLE
+  // ====================================================
+
   function addSectionTitle(
     title: string
   ) {
-    ensureSpace(34);
+    ensureSpace(
+      34
+    );
 
-    y += 8;
+    y +=
+      8;
 
     resetText();
 
@@ -74,7 +109,9 @@ export function downloadResumePdf(
       "bold"
     );
 
-    pdf.setFontSize(10);
+    pdf.setFontSize(
+      10
+    );
 
     pdf.text(
       title.toUpperCase(),
@@ -86,7 +123,8 @@ export function downloadResumePdf(
       }
     );
 
-    y += 6;
+    y +=
+      6;
 
     pdf.setDrawColor(
       203,
@@ -94,7 +132,9 @@ export function downloadResumePdf(
       225
     );
 
-    pdf.setLineWidth(0.6);
+    pdf.setLineWidth(
+      0.6
+    );
 
     pdf.line(
       leftMargin,
@@ -104,8 +144,13 @@ export function downloadResumePdf(
       y
     );
 
-    y += 15;
+    y +=
+      15;
   }
+
+  // ====================================================
+  // NORMAL TEXT
+  // ====================================================
 
   function addText(
     text: string,
@@ -117,14 +162,17 @@ export function downloadResumePdf(
     }
   ) {
     const clean =
-      normalizeText(text);
+      normalizeText(
+        text
+      );
 
     if (!clean) {
       return;
     }
 
     const indent =
-      options?.indent ?? 0;
+      options?.indent ??
+      0;
 
     resetText();
 
@@ -155,7 +203,8 @@ export function downloadResumePdf(
       lineHeight;
 
     ensureSpace(
-      height + 6
+      height +
+        6
     );
 
     pdf.text(
@@ -174,6 +223,10 @@ export function downloadResumePdf(
       (options?.spacingAfter ??
         3);
   }
+
+  // ====================================================
+  // BULLET
+  // ====================================================
 
   function addBullet(
     text: string
@@ -219,9 +272,11 @@ export function downloadResumePdf(
       lineHeight;
 
     ensureSpace(
-      height + 4
+      height +
+        4
     );
 
+    // Draw bullet instead of Unicode bullet
     pdf.setFillColor(
       15,
       23,
@@ -229,8 +284,10 @@ export function downloadResumePdf(
     );
 
     pdf.circle(
-      leftMargin + 3,
-      y - 3,
+      leftMargin +
+        3,
+      y -
+        3,
       1.3,
       "F"
     );
@@ -247,12 +304,284 @@ export function downloadResumePdf(
     );
 
     y +=
-      height + 2;
+      height +
+      2;
   }
 
-  // ==========================================
+  // ====================================================
+  // CONTACT LINKS
+  // ====================================================
+
+  function addContactRow(
+    items: PdfLinkItem[]
+  ) {
+    const validItems =
+      items.filter(
+        (item) =>
+          item.label.trim()
+      );
+
+    if (
+      validItems.length ===
+      0
+    ) {
+      return;
+    }
+
+    resetText();
+
+    pdf.setFont(
+      "helvetica",
+      "normal"
+    );
+
+    pdf.setFontSize(
+      8.8
+    );
+
+    const separator =
+      " | ";
+
+    const separatorWidth =
+      pdf.getTextWidth(
+        separator
+      );
+
+    const lineHeight =
+      13;
+
+    let x =
+      leftMargin;
+
+    ensureSpace(
+      30
+    );
+
+    validItems.forEach(
+      (
+        item,
+        index
+      ) => {
+        const label =
+          normalizeText(
+            item.label
+          );
+
+        const labelWidth =
+          pdf.getTextWidth(
+            label
+          );
+
+        const needsSeparator =
+          index >
+          0;
+
+        const requiredWidth =
+          labelWidth +
+          (needsSeparator
+            ? separatorWidth
+            : 0);
+
+        // Move to next line if needed
+        if (
+          x +
+            requiredWidth >
+          pageWidth -
+            rightMargin
+        ) {
+          y +=
+            lineHeight;
+
+          x =
+            leftMargin;
+        }
+
+        if (
+          needsSeparator &&
+          x !==
+            leftMargin
+        ) {
+          pdf.setTextColor(
+            148,
+            163,
+            184
+          );
+
+          pdf.text(
+            separator,
+            x,
+            y
+          );
+
+          x +=
+            separatorWidth;
+        }
+
+        if (
+          item.url
+        ) {
+          pdf.setTextColor(
+            71,
+            85,
+            105
+          );
+
+          pdf.textWithLink(
+            label,
+            x,
+            y,
+            {
+              url:
+                item.url,
+            }
+          );
+        } else {
+          pdf.setTextColor(
+            71,
+            85,
+            105
+          );
+
+          pdf.text(
+            label,
+            x,
+            y
+          );
+        }
+
+        x +=
+          labelWidth;
+      }
+    );
+
+    y +=
+      17;
+
+    resetText();
+  }
+
+  // ====================================================
+  // PROJECT LINKS
+  // ====================================================
+
+  function addProjectLinks(
+    projectUrl: string,
+    githubUrl: string
+  ) {
+    const items:
+      PdfLinkItem[] = [];
+
+    if (
+      projectUrl
+    ) {
+      items.push({
+        label:
+          "Live Project",
+
+        url:
+          normalizeUrl(
+            projectUrl
+          ),
+      });
+    }
+
+    if (
+      githubUrl
+    ) {
+      items.push({
+        label:
+          "GitHub",
+
+        url:
+          normalizeUrl(
+            githubUrl
+          ),
+      });
+    }
+
+    if (
+      items.length ===
+      0
+    ) {
+      return;
+    }
+
+    resetText();
+
+    pdf.setFont(
+      "helvetica",
+      "normal"
+    );
+
+    pdf.setFontSize(
+      8.5
+    );
+
+    let x =
+      leftMargin;
+
+    const separator =
+      " | ";
+
+    items.forEach(
+      (
+        item,
+        index
+      ) => {
+        if (
+          index >
+          0
+        ) {
+          pdf.setTextColor(
+            148,
+            163,
+            184
+          );
+
+          pdf.text(
+            separator,
+            x,
+            y
+          );
+
+          x +=
+            pdf.getTextWidth(
+              separator
+            );
+        }
+
+        pdf.setTextColor(
+          71,
+          85,
+          105
+        );
+
+        pdf.textWithLink(
+          item.label,
+          x,
+          y,
+          {
+            url:
+              item.url,
+          }
+        );
+
+        x +=
+          pdf.getTextWidth(
+            item.label
+          );
+      }
+    );
+
+    y +=
+      14;
+
+    resetText();
+  }
+
+  // ====================================================
   // HEADER
-  // ==========================================
+  // ====================================================
 
   resetText();
 
@@ -261,7 +590,9 @@ export function downloadResumePdf(
     "bold"
   );
 
-  pdf.setFontSize(19);
+  pdf.setFontSize(
+    19
+  );
 
   pdf.text(
     normalizeText(
@@ -272,7 +603,8 @@ export function downloadResumePdf(
     y
   );
 
-  y += 24;
+  y +=
+    24;
 
   if (
     resume.jobTitle
@@ -280,37 +612,93 @@ export function downloadResumePdf(
     addText(
       resume.jobTitle,
       {
-        fontSize: 11,
-        spacingAfter: 1,
+        fontSize:
+          11,
+
+        spacingAfter:
+          1,
       }
     );
   }
 
-  const contact =
-    [
-      resume.location,
-      resume.email,
-      resume.phone,
-      resume.linkedin,
-      resume.github,
-      resume.portfolio,
-    ]
-      .filter(Boolean)
-      .join(" | ");
+  // ====================================================
+  // CONTACT INFORMATION
+  // ====================================================
 
-  if (contact) {
-    addText(
-      contact,
-      {
-        fontSize: 8.8,
-        spacingAfter: 4,
-      }
-    );
-  }
+  addContactRow([
+    {
+      label:
+        resume.location,
+    },
 
-  // ==========================================
-  // SUMMARY
-  // ==========================================
+    {
+      label:
+        resume.phone,
+
+      url:
+        resume.phone
+          ? `tel:${cleanPhoneForLink(
+              resume.phone
+            )}`
+          : undefined,
+    },
+
+    {
+      label:
+        resume.email,
+
+      url:
+        resume.email
+          ? `mailto:${resume.email}`
+          : undefined,
+    },
+
+    {
+      label:
+        resume.linkedin
+          ? "LinkedIn"
+          : "",
+
+      url:
+        resume.linkedin
+          ? normalizeUrl(
+              resume.linkedin
+            )
+          : undefined,
+    },
+
+    {
+      label:
+        resume.github
+          ? "GitHub"
+          : "",
+
+      url:
+        resume.github
+          ? normalizeUrl(
+              resume.github
+            )
+          : undefined,
+    },
+
+    {
+      label:
+        resume.portfolio
+          ? "Portfolio"
+          : "",
+
+      url:
+        resume.portfolio
+          ? normalizeUrl(
+              resume.portfolio
+            )
+          : undefined,
+    },
+  ]);
+
+  // ====================================================
+  // PROFESSIONAL SUMMARY
+  // ====================================================
 
   if (
     resume.summary.trim()
@@ -324,9 +712,9 @@ export function downloadResumePdf(
     );
   }
 
-  // ==========================================
-  // SKILLS
-  // ==========================================
+  // ====================================================
+  // TECHNICAL SKILLS
+  // ====================================================
 
   const validSkillSections =
     resume.skillSections.filter(
@@ -352,9 +740,14 @@ export function downloadResumePdf(
           addText(
             section.category,
             {
-              bold: true,
-              fontSize: 9.2,
-              spacingAfter: 1,
+              bold:
+                true,
+
+              fontSize:
+                9.2,
+
+              spacingAfter:
+                1,
             }
           );
         }
@@ -368,8 +761,11 @@ export function downloadResumePdf(
               ", "
             ),
             {
-              fontSize: 9,
-              spacingAfter: 6,
+              fontSize:
+                9,
+
+              spacingAfter:
+                6,
             }
           );
         }
@@ -377,9 +773,9 @@ export function downloadResumePdf(
     );
   }
 
-  // ==========================================
-  // EXPERIENCE
-  // ==========================================
+  // ====================================================
+  // PROFESSIONAL EXPERIENCE
+  // ====================================================
 
   const validExperiences =
     resume.experiences.filter(
@@ -400,7 +796,9 @@ export function downloadResumePdf(
 
     validExperiences.forEach(
       (experience) => {
-        ensureSpace(55);
+        ensureSpace(
+          55
+        );
 
         if (
           experience.jobTitle
@@ -408,9 +806,14 @@ export function downloadResumePdf(
           addText(
             experience.jobTitle,
             {
-              bold: true,
-              fontSize: 10,
-              spacingAfter: 1,
+              bold:
+                true,
+
+              fontSize:
+                10,
+
+              spacingAfter:
+                1,
             }
           );
         }
@@ -421,15 +824,24 @@ export function downloadResumePdf(
             experience.project,
             experience.location,
           ]
-            .filter(Boolean)
-            .join(" · ");
+            .filter(
+              Boolean
+            )
+            .join(
+              " - "
+            );
 
-        if (companyLine) {
+        if (
+          companyLine
+        ) {
           addText(
             companyLine,
             {
-              fontSize: 9,
-              spacingAfter: 1,
+              fontSize:
+                9,
+
+              spacingAfter:
+                1,
             }
           );
         }
@@ -441,36 +853,47 @@ export function downloadResumePdf(
             experience.current
           );
 
-        if (dateLine) {
+        if (
+          dateLine
+        ) {
           addText(
             dateLine,
             {
-              fontSize: 8.8,
-              spacingAfter: 5,
+              fontSize:
+                8.8,
+
+              spacingAfter:
+                5,
             }
           );
         }
 
         const lines =
           experience.description
-            .split("\n")
-            .map((line) =>
-              line.trim()
+            .split(
+              "\n"
             )
-            .filter(Boolean);
+            .map(
+              (line) =>
+                line.trim()
+            )
+            .filter(
+              Boolean
+            );
 
         lines.forEach(
           addBullet
         );
 
-        y += 5;
+        y +=
+          5;
       }
     );
   }
 
-  // ==========================================
+  // ====================================================
   // EDUCATION
-  // ==========================================
+  // ====================================================
 
   const validEducation =
     resume.education.filter(
@@ -490,35 +913,54 @@ export function downloadResumePdf(
 
     validEducation.forEach(
       (item) => {
-        ensureSpace(45);
+        ensureSpace(
+          45
+        );
 
-        if (item.school) {
+        if (
+          item.school
+        ) {
           addText(
             item.school,
             {
-              bold: true,
-              fontSize: 10,
-              spacingAfter: 1,
+              bold:
+                true,
+
+              fontSize:
+                10,
+
+              spacingAfter:
+                1,
             }
           );
         }
 
-        if (item.degree) {
+        if (
+          item.degree
+        ) {
           addText(
             item.degree,
             {
-              fontSize: 9.2,
-              spacingAfter: 1,
+              fontSize:
+                9.2,
+
+              spacingAfter:
+                1,
             }
           );
         }
 
-        if (item.location) {
+        if (
+          item.location
+        ) {
           addText(
             item.location,
             {
-              fontSize: 8.8,
-              spacingAfter: 1,
+              fontSize:
+                8.8,
+
+              spacingAfter:
+                1,
             }
           );
         }
@@ -530,12 +972,17 @@ export function downloadResumePdf(
             item.current
           );
 
-        if (dateLine) {
+        if (
+          dateLine
+        ) {
           addText(
             dateLine,
             {
-              fontSize: 8.8,
-              spacingAfter: 3,
+              fontSize:
+                8.8,
+
+              spacingAfter:
+                3,
             }
           );
         }
@@ -546,8 +993,11 @@ export function downloadResumePdf(
           addText(
             `Relevant coursework: ${item.coursework}`,
             {
-              fontSize: 9,
-              spacingAfter: 6,
+              fontSize:
+                9,
+
+              spacingAfter:
+                6,
             }
           );
         }
@@ -555,9 +1005,9 @@ export function downloadResumePdf(
     );
   }
 
-  // ==========================================
+  // ====================================================
   // PROJECTS
-  // ==========================================
+  // ====================================================
 
   const validProjects =
     resume.projects.filter(
@@ -577,15 +1027,24 @@ export function downloadResumePdf(
 
     validProjects.forEach(
       (project) => {
-        ensureSpace(50);
+        ensureSpace(
+          50
+        );
 
-        if (project.name) {
+        if (
+          project.name
+        ) {
           addText(
             project.name,
             {
-              bold: true,
-              fontSize: 10,
-              spacingAfter: 1,
+              bold:
+                true,
+
+              fontSize:
+                10,
+
+              spacingAfter:
+                1,
             }
           );
         }
@@ -596,19 +1055,27 @@ export function downloadResumePdf(
           addText(
             project.description,
             {
-              fontSize: 9.2,
-              spacingAfter: 3,
+              fontSize:
+                9.2,
+
+              spacingAfter:
+                3,
             }
           );
         }
 
         const lines =
           project.bullets
-            .split("\n")
-            .map((line) =>
-              line.trim()
+            .split(
+              "\n"
             )
-            .filter(Boolean);
+            .map(
+              (line) =>
+                line.trim()
+            )
+            .filter(
+              Boolean
+            );
 
         lines.forEach(
           addBullet
@@ -620,55 +1087,59 @@ export function downloadResumePdf(
           addText(
             `Technologies: ${project.technologies}`,
             {
-              fontSize: 9,
-              spacingAfter: 2,
+              fontSize:
+                9,
+
+              spacingAfter:
+                3,
             }
           );
         }
 
-        const links =
-          [
+        if (
+          project.projectUrl ||
+          project.githubUrl
+        ) {
+          ensureSpace(
+            18
+          );
+
+          addProjectLinks(
             project.projectUrl,
-            project.githubUrl,
-          ]
-            .filter(Boolean)
-            .join(" | ");
-
-        if (links) {
-          addText(
-            links,
-            {
-              fontSize: 8.5,
-              spacingAfter: 6,
-            }
+            project.githubUrl
           );
         }
+
+        y +=
+          3;
       }
     );
   }
 
-  // ==========================================
+  // ====================================================
   // ADDITIONAL QUALIFICATIONS
-  // ==========================================
+  // ====================================================
 
   if (
-    resume.additionalQualifications
-      .length > 0
+    resume.additionalQualifications.length >
+    0
   ) {
     addSectionTitle(
       "Additional Qualifications"
     );
 
     resume.additionalQualifications
-      .filter(Boolean)
+      .filter(
+        Boolean
+      )
       .forEach(
         addBullet
       );
   }
 
-  // ==========================================
-  // SAVE
-  // ==========================================
+  // ====================================================
+  // FILE NAME
+  // ====================================================
 
   const safeName =
     (
@@ -694,6 +1165,10 @@ export function downloadResumePdf(
     `${safeName || "resume"}.pdf`
   );
 }
+
+// ======================================================
+// NORMALIZE TEXT
+// ======================================================
 
 function normalizeText(
   value: string
@@ -721,6 +1196,51 @@ function normalizeText(
     )
     .trim();
 }
+
+// ======================================================
+// NORMALIZE URL
+// ======================================================
+
+function normalizeUrl(
+  value: string
+) {
+  const trimmed =
+    value.trim();
+
+  if (!trimmed) {
+    return "";
+  }
+
+  if (
+    trimmed.startsWith(
+      "http://"
+    ) ||
+    trimmed.startsWith(
+      "https://"
+    )
+  ) {
+    return trimmed;
+  }
+
+  return `https://${trimmed}`;
+}
+
+// ======================================================
+// PHONE LINK
+// ======================================================
+
+function cleanPhoneForLink(
+  value: string
+) {
+  return value.replace(
+    /[^\d+]/g,
+    ""
+  );
+}
+
+// ======================================================
+// DATE RANGE
+// ======================================================
 
 function formatDateRange(
   startDate: string,
@@ -759,6 +1279,10 @@ function formatDateRange(
   );
 }
 
+// ======================================================
+// FORMAT MONTH
+// ======================================================
+
 function formatMonth(
   value: string
 ) {
@@ -769,12 +1293,18 @@ function formatMonth(
   const [
     year,
     month,
-  ] = value.split("-");
+  ] = value.split(
+    "-"
+  );
 
   const date =
     new Date(
-      Number(year),
-      Number(month) - 1,
+      Number(
+        year
+      ),
+      Number(
+        month
+      ) - 1,
       1
     );
 
@@ -783,8 +1313,11 @@ function formatMonth(
     {
       month:
         "short",
+
       year:
         "numeric",
     }
-  ).format(date);
+  ).format(
+    date
+  );
 }
