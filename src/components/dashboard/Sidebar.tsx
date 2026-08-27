@@ -83,7 +83,7 @@ const aiToolItems : SidebarItem [] = [
     },
     {
         label: "Career Tools",
-        href:"/dashboard/tools",
+        href:"/dashboard/career-tools",
         icon: Wrench,
     }
 
