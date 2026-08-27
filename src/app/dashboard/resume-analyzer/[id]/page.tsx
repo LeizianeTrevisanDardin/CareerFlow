@@ -7,8 +7,10 @@ import {
 } from "lucide-react";
 
 import { createClient } from "@/lib/supabase/server";
+import AIActionButton from "@/components/AiAnalyzeButton";
 
 import { runResumeAnalysis } from "../actions";
+
 
 export default async function ResumeAnalysisPage({
   params,
@@ -237,12 +239,13 @@ export default async function ResumeAnalysisPage({
                   value={analysis.id}
                 />
 
-                <button
-                  type="submit"
-                  className="rounded-xl bg-emerald-700 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800"
-                >
-                  Run Resume Analysis
-                </button>
+                <div className="mt-8">
+                  <AIActionButton
+                    idleText="Run Resume Analysis"
+                    loadingText="Analyzing Resume..."
+                    description="Careerflow is reviewing your resume for ATS compatibility, experience, skills, formatting, and impact."
+                  />
+                </div>
               </form>
 
               <p className="mt-2 text-xs text-slate-400">

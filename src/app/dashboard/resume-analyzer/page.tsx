@@ -4,8 +4,8 @@ import {
   CheckCircle2,
 } from "lucide-react";
 
+import AIActionButton from "@/components/AiAnalyzeButton";
 import { uploadResumeForAnalysis } from "./actions";
-
 import { createClient } from "@/lib/supabase/server";
 
 export default async function ResumeAnalyzerPage() {
@@ -42,7 +42,7 @@ export default async function ResumeAnalyzerPage() {
 
         <form
           action={uploadResumeForAnalysis}
-          className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center"
+          className="mt-8 rounded-2xl border border-dashed border-slate-300 bg-slate-50 px-6 py-12 text-center"
         >
           <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-2xl border border-slate-200 bg-white">
             <Upload className="h-5 w-5 text-slate-600" />
@@ -62,19 +62,22 @@ export default async function ResumeAnalyzerPage() {
             type="file"
             accept=".pdf,.doc,.docx"
             required
-            className="mx-auto mt-6 block max-w-full text-sm text-slate-500
+            className="
+              mx-auto mt-6 block max-w-full text-sm text-slate-500
               file:mr-4 file:rounded-xl file:border-0
               file:bg-emerald-700 file:px-5 file:py-3
               file:text-sm file:font-semibold file:text-white
-              hover:file:bg-emerald-800"
+              hover:file:bg-emerald-800
+            "
           />
 
-          <button
-            type="submit"
-            className="mt-6 rounded-xl bg-slate-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
-          >
-            Analyze Resume
-          </button>
+          <div className="mt-6 py-3">
+            <AIActionButton
+              idleText="Run Resume Analysis"
+              loadingText="Analyzing Resume..."
+              description="Careerflow is reviewing your resume for ATS compatibility, experience, skills, formatting, and impact."
+            />
+          </div>
 
           <p className="mt-3 text-xs text-slate-400">
             PDF or DOCX · Max 5 MB
