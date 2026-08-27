@@ -108,4 +108,5 @@ export async function updatePassword(
   redirect(
     "/login?success=password_updated"
   );
+  
 }
