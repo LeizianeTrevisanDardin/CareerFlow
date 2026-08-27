@@ -6,6 +6,7 @@ import {
 
 import { generateStandaloneCoverLetter } from "./actions";
 
+import AIActionButton from "@/components/AiAnalyzeButton";
 import { createClient } from "@/lib/supabase/server";
 
 export default async function CoverLetterPage() {
@@ -222,14 +223,14 @@ export default async function CoverLetterPage() {
                 </p>
               </div>
 
-              <button
-                type="submit"
-                disabled={!resumes || resumes.length === 0}
-                className="rounded-xl bg-emerald-700 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-              >
-                Generate Cover Letter
-              </button>
+              <div className="mt-8">
 
+              <AIActionButton
+                idleText="Generate Cover Letter"
+                loadingText="Generating Cover Letter..."
+                description="Careerflow is reviewing your resume and the job description to create a tailored cover letter."
+              />
+            </div>
             </div>
 
           </form>

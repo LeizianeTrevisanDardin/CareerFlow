@@ -9,6 +9,7 @@ import {
 
 import { createClient } from "@/lib/supabase/server";
 import { runPortfolioAnalysis } from "./actions";
+import AIActionButton from "@/components/AiAnalyzeButton";
 
 type PortfolioAnalyzerPageProps = {
   searchParams: Promise<{
@@ -279,13 +280,14 @@ Contact information`}
                 </p>
               </div>
 
-              <button
-                type="submit"
-                className="rounded-xl bg-emerald-700 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800"
-              >
-                Analyze Portfolio
-              </button>
+              <div className="mt-8">
+              <AIActionButton
+                  idleText="Analyze Portfolio"
+                  loadingText="Analyzing Portfolio..."
+                  description="Careerflow is analyzing your portfolio for presentation, project quality, professional positioning, credibility, and recruiter readiness."
+                />
 
+            </div>
             </div>
 
           </form>

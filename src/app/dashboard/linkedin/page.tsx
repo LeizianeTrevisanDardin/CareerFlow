@@ -8,6 +8,8 @@ import {
   UserRound,
 } from "lucide-react";
 
+import AIActionButton from "@/components/AiAnalyzeButton";
+
 import { createClient } from "@/lib/supabase/server";
 import { runLinkedinAnalysis } from "./actions";
 
@@ -270,35 +272,32 @@ Certifications`}
               </p>
             </div>
 
-            {/* ======================================
-                SUBMIT
-            ====================================== */}
+           {/* ======================================
+              SUBMIT
+              ====================================== */}
 
-            <div className="flex flex-col gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex flex-col gap-3 border-t border-slate-100 pt-6 sm:flex-row sm:items-end sm:justify-between">
 
-              <div>
-                <p className="text-sm font-medium text-slate-700">
-                  LinkedIn Profile Analysis
-                </p>
+                <div>
+                  <p className="text-sm font-medium text-slate-700">
+                    LinkedIn Profile Analysis
+                  </p>
 
-                <p className="mt-1 text-xs text-slate-400">
-                  Uses 5 credits
-                </p>
-              </div>
+                  <p className="mt-1 text-xs text-slate-400">
+                    Uses 5 credits
+                  </p>
+                </div>
 
-              <button
-                type="submit"
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800"
-              >
-                <Sparkles className="h-4 w-4" />
-
-                Analyze LinkedIn
-              </button>
-
+             <div className="mt-6 py-3">
+              <AIActionButton
+                idleText="Analyze LinkedIn"
+                loadingText="Analyzing LinkedIn..."
+               description="Careerflow is analyzing your LinkedIn profile for headline quality, professional summary, experience, skills, keywords, and search visibility."
+              />
             </div>
 
-          </form>
-
+              </div>
+            </form>
         </section>
 
         {/* ======================================

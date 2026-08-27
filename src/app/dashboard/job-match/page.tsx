@@ -4,6 +4,8 @@ import { BriefcaseBusiness, FileText} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { runJobMatch } from "./actions";
 
+import AIActionButton from "@/components/AiAnalyzeButton";
+
 export default async function JobMatchPage({
     searchParams,
     }: {
@@ -310,13 +312,14 @@ export default async function JobMatchPage({
                 </p>
               </div>
 
-              <button
-                type="submit"
+              <div className="mt-8">
+              <AIActionButton
+                idleText="Analyze Match"
+                loadingText="Analyzing Match..."
+                description="Careerflow is comparing your resume with the job description to evaluate skills, experience, ATS keywords, missing requirements, and overall job compatibility."
                 disabled={!resumes || resumes.length === 0}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-700 px-6 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800 disabled:cursor-not-allowed disabled:bg-slate-300"
-              >
-                Analyze Match
-              </button>
+              />
+              </div>
 
             </div>
 
