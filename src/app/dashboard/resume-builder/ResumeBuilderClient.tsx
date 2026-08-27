@@ -1,530 +1,754 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import {
+  useState,
+} from "react";
 
-import { saveResume } from "./actions";
-import { jsPDF } from "jspdf";
+import {
+  saveResume,
+} from "./actions";
 
-export type Experience = {
-  company: string;
-  jobTitle: string;
-  location: string;
-  startDate: string;
-  endDate: string;
-  current: boolean;
-  description: string;
-};
+import {
+  downloadResumePdf,
+} from "./resume-pdf";
+
+import ResumePreview from "./ResumePreview";
+
+import type {
+  Education,
+  Experience,
+  Project,
+  ResumeData,
+  SkillSection,
+} from "./types";
+
+// ======================================================
+// PROPS
+// ======================================================
 
 type ResumeBuilderClientProps = {
   initialResume?: {
     id: string;
     title: string;
-    full_name: string | null;
-    job_title: string | null;
-    location: string | null;
-    email: string | null;
-    phone: string | null;
-    linkedin: string | null;
-    summary: string | null;
-    skills: string[];
-    experiences: Experience[];
+
+    full_name:
+      string | null;
+
+    job_title:
+      string | null;
+
+    location:
+      string | null;
+
+    email:
+      string | null;
+
+    phone:
+      string | null;
+
+    linkedin:
+      string | null;
+
+    github:
+      string | null;
+
+    portfolio:
+      string | null;
+
+    summary:
+      string | null;
+
+    skills:
+      string[];
+
+    skill_sections:
+      SkillSection[];
+
+    experiences:
+      Experience[];
+
+    education:
+      Education[];
+
+    projects:
+      Project[];
+
+    additional_qualifications:
+      string[];
   } | null;
 };
+
+// ======================================================
+// COMPONENT
+// ======================================================
 
 export default function ResumeBuilderClient({
   initialResume,
 }: ResumeBuilderClientProps) {
-  const [fullName, setFullName] = useState(
-    initialResume?.full_name ?? ""
+
+  // ====================================================
+  // BASIC INFORMATION
+  // ====================================================
+
+  const [
+    title,
+    setTitle,
+  ] = useState(
+    initialResume?.title ??
+      "My Resume"
   );
 
-  const [jobTitle, setJobTitle] = useState(
-    initialResume?.job_title ?? ""
+  const [
+    fullName,
+    setFullName,
+  ] = useState(
+    initialResume?.full_name ??
+      ""
   );
 
-  const [location, setLocation] = useState(
-    initialResume?.location ?? ""
+  const [
+    jobTitle,
+    setJobTitle,
+  ] = useState(
+    initialResume?.job_title ??
+      ""
   );
 
-  const [email, setEmail] = useState(
-    initialResume?.email ?? ""
+  const [
+    location,
+    setLocation,
+  ] = useState(
+    initialResume?.location ??
+      ""
   );
 
-  const [phone, setPhone] = useState(
-    initialResume?.phone ?? ""
+  const [
+    email,
+    setEmail,
+  ] = useState(
+    initialResume?.email ??
+      ""
   );
 
-  const [linkedin, setLinkedin] = useState(
-    initialResume?.linkedin ?? ""
+  const [
+    phone,
+    setPhone,
+  ] = useState(
+    initialResume?.phone ??
+      ""
   );
 
-  const [summary, setSummary] = useState(
-    initialResume?.summary ?? ""
+  const [
+    linkedin,
+    setLinkedin,
+  ] = useState(
+    initialResume?.linkedin ??
+      ""
   );
 
-  const [skills, setSkills] = useState(
-    initialResume?.skills?.join(", ") ?? ""
+  const [
+    github,
+    setGithub,
+  ] = useState(
+    initialResume?.github ??
+      ""
   );
 
-  const [experiences, setExperiences] =
-    useState<Experience[]>(
-      initialResume?.experiences?.length
-        ? initialResume.experiences
+  const [
+    portfolio,
+    setPortfolio,
+  ] = useState(
+    initialResume?.portfolio ??
+      ""
+  );
+
+  const [
+    summary,
+    setSummary,
+  ] = useState(
+    initialResume?.summary ??
+      ""
+  );
+
+  // ====================================================
+  // SKILLS
+  // ====================================================
+
+  const [
+    skillSections,
+    setSkillSections,
+  ] =
+    useState<SkillSection[]>(
+      initialResume
+        ?.skill_sections
+        ?.length
+        ? initialResume.skill_sections
         : [
             {
-              company: "",
-              jobTitle: "",
-              location: "",
-              startDate: "",
-              endDate: "",
-              current: false,
-              description: "",
+              category:
+                "",
+              skills:
+                [],
             },
           ]
     );
 
-  const parsedSkills = useMemo(() => {
-    return skills
-      .split(",")
-      .map((skill) => skill.trim())
+  // ====================================================
+  // EXPERIENCES
+  // ====================================================
+
+  const [
+    experiences,
+    setExperiences,
+  ] =
+    useState<Experience[]>(
+      initialResume
+        ?.experiences
+        ?.length
+        ? initialResume.experiences.map(
+            (
+              experience
+            ) => ({
+              ...experience,
+
+              project:
+                experience.project ??
+                "",
+            })
+          )
+        : [
+            {
+              company:
+                "",
+
+              jobTitle:
+                "",
+
+              project:
+                "",
+
+              location:
+                "",
+
+              startDate:
+                "",
+
+              endDate:
+                "",
+
+              current:
+                false,
+
+              description:
+                "",
+            },
+          ]
+    );
+
+  // ====================================================
+  // EDUCATION
+  // ====================================================
+
+  const [
+    education,
+    setEducation,
+  ] =
+    useState<Education[]>(
+      initialResume
+        ?.education
+        ?.length
+        ? initialResume.education
+        : [
+            {
+              school:
+                "",
+
+              degree:
+                "",
+
+              location:
+                "",
+
+              startDate:
+                "",
+
+              endDate:
+                "",
+
+              current:
+                false,
+
+              coursework:
+                "",
+            },
+          ]
+    );
+
+  // ====================================================
+  // PROJECTS
+  // ====================================================
+
+  const [
+    projects,
+    setProjects,
+  ] =
+    useState<Project[]>(
+      initialResume
+        ?.projects
+        ?.length
+        ? initialResume.projects
+        : [
+            {
+              name:
+                "",
+
+              description:
+                "",
+
+              technologies:
+                "",
+
+              bullets:
+                "",
+
+              projectUrl:
+                "",
+
+              githubUrl:
+                "",
+            },
+          ]
+    );
+
+  // ====================================================
+  // ADDITIONAL QUALIFICATIONS
+  // ====================================================
+
+  const [
+    additionalQualifications,
+    setAdditionalQualifications,
+  ] = useState(
+    initialResume
+      ?.additional_qualifications
+      ?.join("\n") ??
+      ""
+  );
+
+  // ====================================================
+  // DERIVED DATA
+  // ====================================================
+
+  const parsedAdditionalQualifications =
+    additionalQualifications
+      .split("\n")
+      .map(
+        (item) =>
+          item
+            .replace(
+              /^[-•*]\s*/,
+              ""
+            )
+            .trim()
+      )
       .filter(Boolean);
-  }, [skills]);
+
+  const legacySkills =
+    skillSections
+      .flatMap(
+        (section) =>
+          section.skills
+      )
+      .filter(Boolean);
+
+  // ====================================================
+  // SKILL FUNCTIONS
+  // ====================================================
+
+  function updateSkillCategory(
+    index: number,
+    value: string
+  ) {
+    setSkillSections(
+      (current) =>
+        current.map(
+          (
+            section,
+            sectionIndex
+          ) =>
+            sectionIndex ===
+            index
+              ? {
+                  ...section,
+
+                  category:
+                    value,
+                }
+              : section
+        )
+    );
+  }
+
+  function updateSkillValues(
+    index: number,
+    value: string
+  ) {
+    const skills =
+      value
+        .split(",")
+        .map(
+          (skill) =>
+            skill.trim()
+        )
+        .filter(Boolean);
+
+    setSkillSections(
+      (current) =>
+        current.map(
+          (
+            section,
+            sectionIndex
+          ) =>
+            sectionIndex ===
+            index
+              ? {
+                  ...section,
+
+                  skills,
+                }
+              : section
+        )
+    );
+  }
+
+  function addSkillSection() {
+    setSkillSections(
+      (current) => [
+        ...current,
+
+        {
+          category:
+            "",
+
+          skills:
+            [],
+        },
+      ]
+    );
+  }
+
+  function removeSkillSection(
+    index: number
+  ) {
+    setSkillSections(
+      (current) =>
+        current.filter(
+          (
+            _,
+            sectionIndex
+          ) =>
+            sectionIndex !==
+            index
+        )
+    );
+  }
+
+  // ====================================================
+  // EXPERIENCE FUNCTIONS
+  // ====================================================
 
   function updateExperience(
     index: number,
-    field: keyof Experience,
-    value: string | boolean
+    field:
+      keyof Experience,
+    value:
+      string | boolean
   ) {
-    setExperiences((current) =>
-      current.map(
-        (experience, experienceIndex) =>
-          experienceIndex === index
-            ? {
-                ...experience,
-                [field]: value,
-              }
-            : experience
-      )
+    setExperiences(
+      (current) =>
+        current.map(
+          (
+            experience,
+            experienceIndex
+          ) =>
+            experienceIndex ===
+            index
+              ? {
+                  ...experience,
+
+                  [field]:
+                    value,
+                }
+              : experience
+        )
     );
   }
 
   function addExperience() {
-    setExperiences((current) => [
-      ...current,
-      {
-        company: "",
-        jobTitle: "",
-        location: "",
-        startDate: "",
-        endDate: "",
-        current: false,
-        description: "",
-      },
-    ]);
+    setExperiences(
+      (current) => [
+        ...current,
+
+        {
+          company:
+            "",
+
+          jobTitle:
+            "",
+
+          project:
+            "",
+
+          location:
+            "",
+
+          startDate:
+            "",
+
+          endDate:
+            "",
+
+          current:
+            false,
+
+          description:
+            "",
+        },
+      ]
+    );
   }
 
   function removeExperience(
     index: number
   ) {
-    setExperiences((current) =>
-      current.filter(
-        (_, experienceIndex) =>
-          experienceIndex !== index
-      )
+    setExperiences(
+      (current) =>
+        current.filter(
+          (
+            _,
+            experienceIndex
+          ) =>
+            experienceIndex !==
+            index
+        )
     );
   }
+
+  // ====================================================
+  // EDUCATION FUNCTIONS
+  // ====================================================
+
+  function updateEducation(
+    index: number,
+    field:
+      keyof Education,
+    value:
+      string | boolean
+  ) {
+    setEducation(
+      (current) =>
+        current.map(
+          (
+            item,
+            educationIndex
+          ) =>
+            educationIndex ===
+            index
+              ? {
+                  ...item,
+
+                  [field]:
+                    value,
+                }
+              : item
+        )
+    );
+  }
+
+  function addEducation() {
+    setEducation(
+      (current) => [
+        ...current,
+
+        {
+          school:
+            "",
+
+          degree:
+            "",
+
+          location:
+            "",
+
+          startDate:
+            "",
+
+          endDate:
+            "",
+
+          current:
+            false,
+
+          coursework:
+            "",
+        },
+      ]
+    );
+  }
+
+  function removeEducation(
+    index: number
+  ) {
+    setEducation(
+      (current) =>
+        current.filter(
+          (
+            _,
+            educationIndex
+          ) =>
+            educationIndex !==
+            index
+        )
+    );
+  }
+
+  // ====================================================
+  // PROJECT FUNCTIONS
+  // ====================================================
+
+  function updateProject(
+    index: number,
+    field:
+      keyof Project,
+    value: string
+  ) {
+    setProjects(
+      (current) =>
+        current.map(
+          (
+            project,
+            projectIndex
+          ) =>
+            projectIndex ===
+            index
+              ? {
+                  ...project,
+
+                  [field]:
+                    value,
+                }
+              : project
+        )
+    );
+  }
+
+  function addProject() {
+    setProjects(
+      (current) => [
+        ...current,
+
+        {
+          name:
+            "",
+
+          description:
+            "",
+
+          technologies:
+            "",
+
+          bullets:
+            "",
+
+          projectUrl:
+            "",
+
+          githubUrl:
+            "",
+        },
+      ]
+    );
+  }
+
+  function removeProject(
+    index: number
+  ) {
+    setProjects(
+      (current) =>
+        current.filter(
+          (
+            _,
+            projectIndex
+          ) =>
+            projectIndex !==
+            index
+        )
+    );
+  }
+
+  // ====================================================
+  // DOWNLOAD PDF
+  // ====================================================
 
   function handleDownloadPdf() {
-  const pdf = new jsPDF({
-    orientation: "portrait",
-    unit: "pt",
-    format: "letter",
-  });
+    const resumeData:
+      ResumeData = {
+      id:
+        initialResume?.id,
 
-  const pageWidth =
-    pdf.internal.pageSize.getWidth();
+      title,
 
-  const pageHeight =
-    pdf.internal.pageSize.getHeight();
+      fullName,
 
-  const leftMargin = 48;
-  const rightMargin = 48;
-  const topMargin = 48;
-  const bottomMargin = 48;
-
-  const usableWidth =
-    pageWidth -
-    leftMargin -
-    rightMargin;
-
-  let currentY = topMargin;
-
-  function addPageIfNeeded(
-    requiredHeight: number
-  ) {
-    if (
-      currentY +
-        requiredHeight >
-      pageHeight -
-        bottomMargin
-    ) {
-      pdf.addPage();
-
-      currentY = topMargin;
-    }
-  }
-
-  function addSectionTitle(
-    title: string
-  ) {
-    addPageIfNeeded(35);
-
-    currentY += 10;
-
-    pdf.setFont(
-      "helvetica",
-      "bold"
-    );
-
-    pdf.setFontSize(10.5);
-
-    pdf.text(
-      title.toUpperCase(),
-      leftMargin,
-      currentY
-    );
-
-    currentY += 6;
-
-    pdf.setDrawColor(
-      210,
-      214,
-      220
-    );
-
-    pdf.setLineWidth(0.6);
-
-    pdf.line(
-      leftMargin,
-      currentY,
-      pageWidth - rightMargin,
-      currentY
-    );
-
-    currentY += 15;
-  }
-
-  function addParagraph(
-    text: string,
-    options?: {
-      bold?: boolean;
-      bullet?: boolean;
-      fontSize?: number;
-    }
-  ) {
-    if (!text.trim()) {
-      return;
-    }
-
-    const bullet =
-      options?.bullet ?? false;
-
-    const cleanText =
-      bullet
-        ? `• ${text}`
-        : text;
-
-    pdf.setFont(
-      "helvetica",
-      options?.bold
-        ? "bold"
-        : "normal"
-    );
-
-    pdf.setFontSize(
-      options?.fontSize ?? 9.5
-    );
-
-    const wrapped =
-      pdf.splitTextToSize(
-        cleanText,
-        bullet
-          ? usableWidth - 12
-          : usableWidth
-      );
-
-    const lineHeight = 13.5;
-
-    const height =
-      wrapped.length *
-      lineHeight;
-
-    addPageIfNeeded(
-      height + 5
-    );
-
-    pdf.text(
-      wrapped,
-      bullet
-        ? leftMargin + 10
-        : leftMargin,
-      currentY
-    );
-
-    currentY +=
-      height + 4;
-  }
-
-  // ======================================
-  // NAME
-  // ======================================
-
-  pdf.setFont(
-    "helvetica",
-    "bold"
-  );
-
-  pdf.setFontSize(19);
-
-  pdf.text(
-    fullName || "Your Name",
-    leftMargin,
-    currentY
-  );
-
-  currentY += 24;
-
-  // ======================================
-  // JOB TITLE
-  // ======================================
-
-  if (jobTitle) {
-    pdf.setFont(
-      "helvetica",
-      "normal"
-    );
-
-    pdf.setFontSize(10.5);
-
-    pdf.text(
       jobTitle,
-      leftMargin,
-      currentY
-    );
 
-    currentY += 15;
-  }
+      location,
 
-  // ======================================
-  // CONTACT
-  // ======================================
+      email,
 
-  const contactParts = [
-    location,
-    email,
-    phone,
-    linkedin,
-  ].filter(Boolean);
+      phone,
 
-  if (
-    contactParts.length > 0
-  ) {
-    pdf.setFont(
-      "helvetica",
-      "normal"
-    );
+      linkedin,
 
-    pdf.setFontSize(9);
+      github,
 
-    const contactText =
-      contactParts.join(" | ");
+      portfolio,
 
-    const wrapped =
-      pdf.splitTextToSize(
-        contactText,
-        usableWidth
-      );
+      summary,
 
-    pdf.text(
-      wrapped,
-      leftMargin,
-      currentY
-    );
+      skillSections,
 
-    currentY +=
-      wrapped.length * 12;
-  }
+      experiences,
 
-  currentY += 8;
+      education,
 
-  // ======================================
-  // SUMMARY
-  // ======================================
+      projects,
 
-  if (summary.trim()) {
-    addSectionTitle(
-      "Professional Summary"
-    );
+      additionalQualifications:
+        parsedAdditionalQualifications,
+    };
 
-    addParagraph(summary);
-  }
-
-  // ======================================
-  // SKILLS
-  // ======================================
-
-  if (
-    parsedSkills.length > 0
-  ) {
-    addSectionTitle("Skills");
-
-    parsedSkills.forEach(
-      (skill) => {
-        addParagraph(
-          skill,
-          {
-            bullet: true,
-          }
-        );
-      }
+    downloadResumePdf(
+      resumeData
     );
   }
 
-  // ======================================
-  // EXPERIENCE
-  // ======================================
-
-  const validExperiences =
-    experiences.filter(
-      (experience) =>
-        experience.company ||
-        experience.jobTitle ||
-        experience.description
-    );
-
-  if (
-    validExperiences.length >
-    0
-  ) {
-    addSectionTitle(
-      "Professional Experience"
-    );
-
-    validExperiences.forEach(
-      (experience) => {
-        addPageIfNeeded(45);
-
-        const roleLine =
-          [
-            experience.jobTitle,
-            experience.company,
-          ]
-            .filter(Boolean)
-            .join(" - ");
-
-        if (roleLine) {
-          addParagraph(
-            roleLine,
-            {
-              bold: true,
-              fontSize: 10,
-            }
-          );
-        }
-
-        const locationAndDate = [
-          experience.location,
-          [
-            experience.startDate,
-            experience.current
-              ? "Present"
-              : experience.endDate,
-          ]
-            .filter(Boolean)
-            .join(" - "),
-        ]
-          .filter(Boolean)
-          .join(" | ");
-
-        if (
-          locationAndDate
-        ) {
-          addParagraph(
-            locationAndDate,
-            {
-              fontSize: 9,
-            }
-          );
-        }
-
-        const descriptionLines =
-          experience.description
-            .split("\n")
-            .map((line) =>
-              line.trim()
-            )
-            .filter(Boolean);
-
-        descriptionLines.forEach(
-          (line) => {
-            const cleaned =
-              line.replace(
-                /^[-•*]\s*/,
-                ""
-              );
-
-            addParagraph(
-              cleaned,
-              {
-                bullet: true,
-              }
-            );
-          }
-        );
-
-        currentY += 6;
-      }
-    );
-  }
-
-  // ======================================
-  // FILE NAME
-  // ======================================
-
-  const safeName =
-    (
-      fullName ||
-      "resume"
-    )
-      .trim()
-      .toLowerCase()
-      .replace(
-        /[^a-z0-9-_]+/g,
-        "-"
-      )
-      .replace(
-        /-+/g,
-        "-"
-      )
-      .replace(
-        /^-|-$/g,
-        ""
-      );
-
-  pdf.save(
-    `${safeName || "resume"}.pdf`
-  );
-}
+  // ====================================================
+  // UI
+  // ====================================================
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
+
       <div className="w-full max-w-7xl">
 
-        {/* HEADER */}
+        {/* ====================================
+            HEADER
+        ==================================== */}
 
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
 
           <div>
+
             <p className="text-sm font-medium uppercase tracking-wide text-slate-400">
               Resume Builder
             </p>
@@ -536,175 +760,346 @@ export default function ResumeBuilderClient({
             <p className="mt-2 max-w-2xl text-slate-500">
               Create a clean, ATS-friendly resume and preview it as you build.
             </p>
+
           </div>
 
           <button
             type="button"
-            onClick={handleDownloadPdf}
+            onClick={
+              handleDownloadPdf
+            }
             className="w-fit rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
           >
             Download PDF
           </button>
 
         </div>
-        {/* MAIN GRID */}
+
+        {/* ====================================
+            MAIN GRID
+        ==================================== */}
 
         <div className="mt-8 grid grid-cols-1 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
 
-          {/* ======================================
+          {/* ==================================
               LEFT SIDE
-          ====================================== */}
+          ================================== */}
 
           <div className="space-y-6">
 
-            {/* PERSONAL INFORMATION */}
+            {/* ==================================
+                RESUME DETAILS
+            ================================== */}
 
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6">
-              <h2 className="text-xl font-bold text-slate-900">
-                Personal information
-              </h2>
+            <Section>
+
+              <SectionHeader
+                title="Resume details"
+                description="Give this resume a name so you can identify it later."
+              />
+
+              <div className="mt-5">
+
+                <Field
+                  label="Resume name"
+                  value={title}
+                  onChange={
+                    setTitle
+                  }
+                  placeholder="e.g. Software Developer Resume"
+                />
+
+              </div>
+
+            </Section>
+
+            {/* ==================================
+                PERSONAL INFORMATION
+            ================================== */}
+
+            <Section>
+
+              <SectionHeader
+                title="Personal information"
+                description="Add your contact and professional profile information."
+              />
 
               <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
 
                 <Field
                   label="Full name"
-                  value={fullName}
-                  onChange={setFullName}
+                  value={
+                    fullName
+                  }
+                  onChange={
+                    setFullName
+                  }
                   placeholder="Your full name"
                 />
 
                 <Field
                   label="Job title"
-                  value={jobTitle}
-                  onChange={setJobTitle}
+                  value={
+                    jobTitle
+                  }
+                  onChange={
+                    setJobTitle
+                  }
                   placeholder="e.g. Software Developer"
                 />
 
                 <Field
                   label="Location"
-                  value={location}
-                  onChange={setLocation}
-                  placeholder="e.g. Calgary, Canada"
+                  value={
+                    location
+                  }
+                  onChange={
+                    setLocation
+                  }
+                  placeholder="e.g. Calgary, AB"
                 />
 
                 <Field
                   label="Email"
-                  value={email}
-                  onChange={setEmail}
+                  value={
+                    email
+                  }
+                  onChange={
+                    setEmail
+                  }
                   placeholder="you@email.com"
                   type="email"
                 />
 
                 <Field
                   label="Phone"
-                  value={phone}
-                  onChange={setPhone}
+                  value={
+                    phone
+                  }
+                  onChange={
+                    setPhone
+                  }
                   placeholder="+1 403..."
                 />
 
                 <Field
                   label="LinkedIn"
-                  value={linkedin}
-                  onChange={setLinkedin}
+                  value={
+                    linkedin
+                  }
+                  onChange={
+                    setLinkedin
+                  }
                   placeholder="linkedin.com/in/..."
                 />
 
+                <Field
+                  label="GitHub"
+                  value={
+                    github
+                  }
+                  onChange={
+                    setGithub
+                  }
+                  placeholder="github.com/..."
+                />
+
+                <Field
+                  label="Portfolio"
+                  value={
+                    portfolio
+                  }
+                  onChange={
+                    setPortfolio
+                  }
+                  placeholder="yourportfolio.com"
+                />
+
               </div>
-            </section>
 
-            {/* PROFESSIONAL SUMMARY */}
+            </Section>
 
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6">
-              <h2 className="text-xl font-bold text-slate-900">
-                Professional summary
-              </h2>
+            {/* ==================================
+                SUMMARY
+            ================================== */}
+
+            <Section>
+
+              <SectionHeader
+                title="Professional summary"
+                description="Write a concise introduction highlighting your experience and strengths."
+              />
 
               <textarea
-                value={summary}
-                onChange={(event) =>
+                value={
+                  summary
+                }
+                onChange={(
+                  event
+                ) =>
                   setSummary(
-                    event.target.value
+                    event.target
+                      .value
                   )
                 }
-                rows={5}
+                rows={7}
                 placeholder="Write a short summary of your professional background..."
-                className="mt-5 w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-emerald-500"
+                className="mt-5 w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 outline-none transition focus:border-emerald-500"
               />
-            </section>
 
-            {/* SKILLS */}
+            </Section>
 
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6">
-              <h2 className="text-xl font-bold text-slate-900">
-                Skills
-              </h2>
+            {/* ==================================
+                TECHNICAL SKILLS
+            ================================== */}
 
-              <input
-                value={skills}
-                onChange={(event) =>
-                  setSkills(
-                    event.target.value
-                  )
+            <Section>
+
+              <SectionHeaderWithButton
+                title="Technical skills"
+                description="Organize your skills into categories to improve readability."
+                buttonText="Add category"
+                onClick={
+                  addSkillSection
                 }
-                placeholder="React, TypeScript, Next.js, Git"
-                className="mt-5 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-emerald-500"
               />
 
-              <p className="mt-2 text-xs text-slate-400">
-                Separate skills with commas.
-              </p>
-            </section>
+              <div className="mt-6 space-y-5">
 
-            {/* PROFESSIONAL EXPERIENCE */}
+                {skillSections.map(
+                  (
+                    section,
+                    index
+                  ) => (
 
-            <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6">
+                    <div
+                      key={
+                        index
+                      }
+                      className="rounded-2xl border border-slate-200 p-5"
+                    >
 
-              <div className="flex items-center justify-between gap-4">
+                      <Field
+                        label="Category"
+                        value={
+                          section.category
+                        }
+                        onChange={(
+                          value
+                        ) =>
+                          updateSkillCategory(
+                            index,
+                            value
+                          )
+                        }
+                        placeholder="e.g. Scripting & Programming"
+                      />
 
-                <div>
-                  <h2 className="text-xl font-bold text-slate-900">
-                    Professional experience
-                  </h2>
+                      <div className="mt-4">
 
-                  <p className="mt-1 text-sm text-slate-500">
-                    Add your most relevant work experience.
-                  </p>
-                </div>
+                        <label className="mb-2 block text-sm font-medium text-slate-700">
+                          Skills
+                        </label>
 
-                <button
-                  type="button"
-                  onClick={addExperience}
-                  className="rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
-                >
-                  Add experience
-                </button>
+                        <input
+                          value={
+                            section.skills.join(
+                              ", "
+                            )
+                          }
+                          onChange={(
+                            event
+                          ) =>
+                            updateSkillValues(
+                              index,
+                              event
+                                .target
+                                .value
+                            )
+                          }
+                          placeholder="PowerShell, C#, Java, TypeScript"
+                          className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition placeholder:text-slate-300 focus:border-emerald-500"
+                        />
+
+                        <p className="mt-2 text-xs text-slate-400">
+                          Separate skills with commas.
+                        </p>
+
+                      </div>
+
+                      {skillSections.length >
+                        1 && (
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            removeSkillSection(
+                              index
+                            )
+                          }
+                          className="mt-4 text-sm font-semibold text-red-600 transition hover:text-red-700"
+                        >
+                          Remove category
+                        </button>
+
+                      )}
+
+                    </div>
+
+                  )
+                )}
 
               </div>
+
+            </Section>
+
+            {/* ==================================
+                EXPERIENCE
+            ================================== */}
+
+            <Section>
+
+              <SectionHeaderWithButton
+                title="Professional experience"
+                description="Add your most relevant work experience."
+                buttonText="Add experience"
+                onClick={
+                  addExperience
+                }
+              />
 
               <div className="mt-6 space-y-6">
 
                 {experiences.map(
-                  (experience, index) => (
+                  (
+                    experience,
+                    index
+                  ) => (
+
                     <div
-                      key={index}
+                      key={
+                        index
+                      }
                       className="rounded-2xl border border-slate-200 p-5"
                     >
 
                       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 
                         <Field
-                          label="Company"
+                          label="Company / Organization"
                           value={
                             experience.company
                           }
-                          onChange={(value) =>
+                          onChange={(
+                            value
+                          ) =>
                             updateExperience(
                               index,
                               "company",
                               value
                             )
                           }
-                          placeholder="Company name"
+                          placeholder="Company or organization"
                         />
 
                         <Field
@@ -712,7 +1107,9 @@ export default function ResumeBuilderClient({
                           value={
                             experience.jobTitle
                           }
-                          onChange={(value) =>
+                          onChange={(
+                            value
+                          ) =>
                             updateExperience(
                               index,
                               "jobTitle",
@@ -723,56 +1120,75 @@ export default function ResumeBuilderClient({
                         />
 
                         <Field
+                          label="Project / Initiative"
+                          value={
+                            experience.project
+                          }
+                          onChange={(
+                            value
+                          ) =>
+                            updateExperience(
+                              index,
+                              "project",
+                              value
+                            )
+                          }
+                          placeholder="e.g. Financial Web Application"
+                        />
+
+                        <Field
                           label="Location"
                           value={
                             experience.location
                           }
-                          onChange={(value) =>
+                          onChange={(
+                            value
+                          ) =>
                             updateExperience(
                               index,
                               "location",
                               value
                             )
                           }
-                          placeholder="City, Country"
+                          placeholder="City, Country or Remote"
                         />
 
-                        <div className="grid grid-cols-2 gap-3">
+                        <Field
+                          label="Start date"
+                          value={
+                            experience.startDate
+                          }
+                          onChange={(
+                            value
+                          ) =>
+                            updateExperience(
+                              index,
+                              "startDate",
+                              value
+                            )
+                          }
+                          type="month"
+                        />
 
-                          <Field
-                            label="Start date"
-                            value={
-                              experience.startDate
-                            }
-                            onChange={(value) =>
-                              updateExperience(
-                                index,
-                                "startDate",
-                                value
-                              )
-                            }
-                            type="month"
-                          />
-
-                          <Field
-                            label="End date"
-                            value={
-                              experience.endDate
-                            }
-                            onChange={(value) =>
-                              updateExperience(
-                                index,
-                                "endDate",
-                                value
-                              )
-                            }
-                            type="month"
-                            disabled={
-                              experience.current
-                            }
-                          />
-
-                        </div>
+                        <Field
+                          label="End date"
+                          value={
+                            experience.endDate
+                          }
+                          onChange={(
+                            value
+                          ) =>
+                            updateExperience(
+                              index,
+                              "endDate",
+                              value
+                            )
+                          }
+                          type="month"
+                          disabled={
+                            experience.current
+                          }
+                        />
 
                       </div>
 
@@ -783,36 +1199,58 @@ export default function ResumeBuilderClient({
                           checked={
                             experience.current
                           }
-                          onChange={(event) =>
+                          onChange={(
+                            event
+                          ) =>
                             updateExperience(
                               index,
                               "current",
-                              event.target.checked
+                              event
+                                .target
+                                .checked
                             )
                           }
                         />
 
                         I currently work here
+
                       </label>
 
-                      <textarea
-                        value={
-                          experience.description
-                        }
-                        onChange={(event) =>
-                          updateExperience(
-                            index,
-                            "description",
-                            event.target.value
-                          )
-                        }
-                        rows={4}
-                        placeholder="Describe your responsibilities and achievements..."
-                        className="mt-4 w-full resize-none rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-emerald-500"
-                      />
+                      <div className="mt-4">
+
+                        <label className="mb-2 block text-sm font-medium text-slate-700">
+                          Responsibilities & achievements
+                        </label>
+
+                        <textarea
+                          value={
+                            experience.description
+                          }
+                          onChange={(
+                            event
+                          ) =>
+                            updateExperience(
+                              index,
+                              "description",
+                              event
+                                .target
+                                .value
+                            )
+                          }
+                          rows={7}
+                          placeholder={`Add one achievement per line.\n- Developed...\n- Collaborated...\n- Improved...`}
+                          className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 outline-none transition focus:border-emerald-500"
+                        />
+
+                        <p className="mt-2 text-xs text-slate-400">
+                          Use one responsibility or achievement per line.
+                        </p>
+
+                      </div>
 
                       {experiences.length >
                         1 && (
+
                         <button
                           type="button"
                           onClick={() =>
@@ -820,80 +1258,560 @@ export default function ResumeBuilderClient({
                               index
                             )
                           }
-                          className="mt-4 text-sm font-semibold text-red-600 hover:text-red-700"
+                          className="mt-4 text-sm font-semibold text-red-600 transition hover:text-red-700"
                         >
                           Remove experience
                         </button>
+
                       )}
 
                     </div>
+
                   )
                 )}
 
               </div>
-            </section>
 
-            {/* ======================================
-                SAVE RESUME
-            ====================================== */}
+            </Section>
 
-            <form action={saveResume}>
+            {/* ==================================
+                EDUCATION
+            ================================== */}
+
+            <Section>
+
+              <SectionHeaderWithButton
+                title="Education"
+                description="Add your degree, diploma, certification, or relevant education."
+                buttonText="Add education"
+                onClick={
+                  addEducation
+                }
+              />
+
+              <div className="mt-6 space-y-6">
+
+                {education.map(
+                  (
+                    item,
+                    index
+                  ) => (
+
+                    <div
+                      key={
+                        index
+                      }
+                      className="rounded-2xl border border-slate-200 p-5"
+                    >
+
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+                        <Field
+                          label="School"
+                          value={
+                            item.school
+                          }
+                          onChange={(
+                            value
+                          ) =>
+                            updateEducation(
+                              index,
+                              "school",
+                              value
+                            )
+                          }
+                          placeholder="School or institution"
+                        />
+
+                        <Field
+                          label="Program / Degree"
+                          value={
+                            item.degree
+                          }
+                          onChange={(
+                            value
+                          ) =>
+                            updateEducation(
+                              index,
+                              "degree",
+                              value
+                            )
+                          }
+                          placeholder="e.g. Software Development Diploma"
+                        />
+
+                        <Field
+                          label="Location"
+                          value={
+                            item.location
+                          }
+                          onChange={(
+                            value
+                          ) =>
+                            updateEducation(
+                              index,
+                              "location",
+                              value
+                            )
+                          }
+                          placeholder="e.g. Calgary, AB"
+                        />
+
+                        <div />
+
+                        <Field
+                          label="Start date"
+                          value={
+                            item.startDate
+                          }
+                          onChange={(
+                            value
+                          ) =>
+                            updateEducation(
+                              index,
+                              "startDate",
+                              value
+                            )
+                          }
+                          type="month"
+                        />
+
+                        <Field
+                          label="End date"
+                          value={
+                            item.endDate
+                          }
+                          onChange={(
+                            value
+                          ) =>
+                            updateEducation(
+                              index,
+                              "endDate",
+                              value
+                            )
+                          }
+                          type="month"
+                          disabled={
+                            item.current
+                          }
+                        />
+
+                      </div>
+
+                      <label className="mt-4 flex items-center gap-2 text-sm text-slate-600">
+
+                        <input
+                          type="checkbox"
+                          checked={
+                            item.current
+                          }
+                          onChange={(
+                            event
+                          ) =>
+                            updateEducation(
+                              index,
+                              "current",
+                              event
+                                .target
+                                .checked
+                            )
+                          }
+                        />
+
+                        I currently study here
+
+                      </label>
+
+                      <div className="mt-4">
+
+                        <label className="mb-2 block text-sm font-medium text-slate-700">
+                          Relevant coursework
+                        </label>
+
+                        <textarea
+                          value={
+                            item.coursework
+                          }
+                          onChange={(
+                            event
+                          ) =>
+                            updateEducation(
+                              index,
+                              "coursework",
+                              event
+                                .target
+                                .value
+                            )
+                          }
+                          rows={4}
+                          placeholder="Object-Oriented Programming, Databases, Cloud Technologies..."
+                          className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 outline-none transition focus:border-emerald-500"
+                        />
+
+                      </div>
+
+                      {education.length >
+                        1 && (
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            removeEducation(
+                              index
+                            )
+                          }
+                          className="mt-4 text-sm font-semibold text-red-600 transition hover:text-red-700"
+                        >
+                          Remove education
+                        </button>
+
+                      )}
+
+                    </div>
+
+                  )
+                )}
+
+              </div>
+
+            </Section>
+
+            {/* ==================================
+                PROJECTS
+            ================================== */}
+
+            <Section>
+
+              <SectionHeaderWithButton
+                title="Projects"
+                description="Showcase technical, academic, personal, or professional projects."
+                buttonText="Add project"
+                onClick={
+                  addProject
+                }
+              />
+
+              <div className="mt-6 space-y-6">
+
+                {projects.map(
+                  (
+                    project,
+                    index
+                  ) => (
+
+                    <div
+                      key={
+                        index
+                      }
+                      className="rounded-2xl border border-slate-200 p-5"
+                    >
+
+                      <Field
+                        label="Project name"
+                        value={
+                          project.name
+                        }
+                        onChange={(
+                          value
+                        ) =>
+                          updateProject(
+                            index,
+                            "name",
+                            value
+                          )
+                        }
+                        placeholder="e.g. CareerFlow"
+                      />
+
+                      <div className="mt-4">
+
+                        <label className="mb-2 block text-sm font-medium text-slate-700">
+                          Short description
+                        </label>
+
+                        <textarea
+                          value={
+                            project.description
+                          }
+                          onChange={(
+                            event
+                          ) =>
+                            updateProject(
+                              index,
+                              "description",
+                              event
+                                .target
+                                .value
+                            )
+                          }
+                          rows={3}
+                          placeholder="Briefly explain the project and its purpose..."
+                          className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 outline-none transition focus:border-emerald-500"
+                        />
+
+                      </div>
+
+                      <div className="mt-4">
+
+                        <label className="mb-2 block text-sm font-medium text-slate-700">
+                          Highlights
+                        </label>
+
+                        <textarea
+                          value={
+                            project.bullets
+                          }
+                          onChange={(
+                            event
+                          ) =>
+                            updateProject(
+                              index,
+                              "bullets",
+                              event
+                                .target
+                                .value
+                            )
+                          }
+                          rows={6}
+                          placeholder={`One achievement per line.\n- Built authentication...\n- Integrated database...\n- Implemented AI analysis...`}
+                          className="w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 outline-none transition focus:border-emerald-500"
+                        />
+
+                      </div>
+
+                      <div className="mt-4">
+
+                        <Field
+                          label="Technologies"
+                          value={
+                            project.technologies
+                          }
+                          onChange={(
+                            value
+                          ) =>
+                            updateProject(
+                              index,
+                              "technologies",
+                              value
+                            )
+                          }
+                          placeholder="React, Next.js, TypeScript, Supabase"
+                        />
+
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+
+                        <Field
+                          label="Project URL"
+                          value={
+                            project.projectUrl
+                          }
+                          onChange={(
+                            value
+                          ) =>
+                            updateProject(
+                              index,
+                              "projectUrl",
+                              value
+                            )
+                          }
+                          placeholder="https://..."
+                        />
+
+                        <Field
+                          label="GitHub URL"
+                          value={
+                            project.githubUrl
+                          }
+                          onChange={(
+                            value
+                          ) =>
+                            updateProject(
+                              index,
+                              "githubUrl",
+                              value
+                            )
+                          }
+                          placeholder="https://github.com/..."
+                        />
+
+                      </div>
+
+                      {projects.length >
+                        1 && (
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            removeProject(
+                              index
+                            )
+                          }
+                          className="mt-4 text-sm font-semibold text-red-600 transition hover:text-red-700"
+                        >
+                          Remove project
+                        </button>
+
+                      )}
+
+                    </div>
+
+                  )
+                )}
+
+              </div>
+
+            </Section>
+
+            {/* ==================================
+                ADDITIONAL QUALIFICATIONS
+            ================================== */}
+
+            <Section>
+
+              <SectionHeader
+                title="Additional qualifications"
+                description="Add strengths, soft skills, certifications, or other relevant qualifications."
+              />
+
+              <textarea
+                value={
+                  additionalQualifications
+                }
+                onChange={(
+                  event
+                ) =>
+                  setAdditionalQualifications(
+                    event
+                      .target
+                      .value
+                  )
+                }
+                rows={7}
+                placeholder={`Add one qualification per line.\nStrong analytical and technical problem-solving skills\nCustomer-service focused\nStrong organizational and time-management skills`}
+                className="mt-5 w-full resize-y rounded-xl border border-slate-200 px-4 py-3 text-sm leading-6 outline-none transition focus:border-emerald-500"
+              />
+
+              <p className="mt-2 text-xs text-slate-400">
+                Add one qualification per line.
+              </p>
+
+            </Section>
+
+            {/* ==================================
+                SAVE
+            ================================== */}
+
+            <form
+              action={
+                saveResume
+              }
+            >
 
               <input
                 type="hidden"
                 name="resumeId"
                 value={
-                  initialResume?.id ?? ""
+                  initialResume?.id ??
+                  ""
+                }
+              />
+
+              <input
+                type="hidden"
+                name="title"
+                value={
+                  title
                 }
               />
 
               <input
                 type="hidden"
                 name="fullName"
-                value={fullName}
+                value={
+                  fullName
+                }
               />
 
               <input
                 type="hidden"
                 name="jobTitle"
-                value={jobTitle}
+                value={
+                  jobTitle
+                }
               />
 
               <input
                 type="hidden"
                 name="location"
-                value={location}
+                value={
+                  location
+                }
               />
 
               <input
                 type="hidden"
                 name="email"
-                value={email}
+                value={
+                  email
+                }
               />
 
               <input
                 type="hidden"
                 name="phone"
-                value={phone}
+                value={
+                  phone
+                }
               />
 
               <input
                 type="hidden"
                 name="linkedin"
-                value={linkedin}
+                value={
+                  linkedin
+                }
+              />
+
+              <input
+                type="hidden"
+                name="github"
+                value={
+                  github
+                }
+              />
+
+              <input
+                type="hidden"
+                name="portfolio"
+                value={
+                  portfolio
+                }
               />
 
               <input
                 type="hidden"
                 name="summary"
-                value={summary}
+                value={
+                  summary
+                }
               />
 
+              {/* Legacy skills */}
               <input
                 type="hidden"
                 name="skills"
                 value={JSON.stringify(
-                  parsedSkills
+                  legacySkills
+                )}
+              />
+
+              <input
+                type="hidden"
+                name="skillSections"
+                value={JSON.stringify(
+                  skillSections
                 )}
               />
 
@@ -902,6 +1820,30 @@ export default function ResumeBuilderClient({
                 name="experiences"
                 value={JSON.stringify(
                   experiences
+                )}
+              />
+
+              <input
+                type="hidden"
+                name="education"
+                value={JSON.stringify(
+                  education
+                )}
+              />
+
+              <input
+                type="hidden"
+                name="projects"
+                value={JSON.stringify(
+                  projects
+                )}
+              />
+
+              <input
+                type="hidden"
+                name="additionalQualifications"
+                value={JSON.stringify(
+                  parsedAdditionalQualifications
                 )}
               />
 
@@ -918,201 +1860,152 @@ export default function ResumeBuilderClient({
 
           </div>
 
-          {/* ======================================
+          {/* ==================================
               RIGHT SIDE - PREVIEW
-          ====================================== */}
+          ================================== */}
 
           <div className="xl:sticky xl:top-6 xl:self-start">
 
-            <div className="rounded-3xl border border-slate-200 bg-slate-100 p-3 sm:p-5">
-
-              <div className="mx-auto min-h-[900px] w-full max-w-[850px] bg-white px-6 py-8 shadow-sm sm:px-10 lg:px-12 lg:py-12">
-
-                {/* NAME */}
-
-                {fullName ? (
-                  <h1 className="text-3xl font-bold tracking-tight text-slate-950">
-                    {fullName}
-                  </h1>
-                ) : (
-                  <h1 className="text-3xl font-bold text-slate-300">
-                    Your Name
-                  </h1>
-                )}
-
-                {/* JOB TITLE */}
-
-                {jobTitle && (
-                  <p className="mt-2 text-base font-medium text-slate-700">
-                    {jobTitle}
-                  </p>
-                )}
-
-                {/* CONTACT */}
-
-                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-sm text-slate-500">
-
-                  {location && (
-                    <span>
-                      {location}
-                    </span>
-                  )}
-
-                  {email && (
-                    <span>
-                      {email}
-                    </span>
-                  )}
-
-                  {phone && (
-                    <span>
-                      {phone}
-                    </span>
-                  )}
-
-                  {linkedin && (
-                    <span>
-                      {linkedin}
-                    </span>
-                  )}
-
-                </div>
-
-                {/* SUMMARY */}
-
-                {summary && (
-                  <ResumeSection title="Professional Summary">
-                    <p className="text-sm leading-6 text-slate-700">
-                      {summary}
-                    </p>
-                  </ResumeSection>
-                )}
-
-                {/* SKILLS */}
-
-                {parsedSkills.length >
-                  0 && (
-                  <ResumeSection title="Skills">
-
-                    <div className="flex flex-wrap gap-x-3 gap-y-2 text-sm text-slate-700">
-
-                      {parsedSkills.map(
-                        (skill) => (
-                          <span
-                            key={skill}
-                          >
-                            {skill}
-                          </span>
-                        )
-                      )}
-
-                    </div>
-
-                  </ResumeSection>
-                )}
-
-                {/* EXPERIENCE */}
-
-                {experiences.some(
-                  (experience) =>
-                    experience.company ||
-                    experience.jobTitle ||
-                    experience.description
-                ) && (
-                  <ResumeSection title="Professional Experience">
-
-                    <div className="space-y-6">
-
-                      {experiences.map(
-                        (
-                          experience,
-                          index
-                        ) => {
-                          if (
-                            !experience.company &&
-                            !experience.jobTitle &&
-                            !experience.description
-                          ) {
-                            return null;
-                          }
-
-                          return (
-                            <div key={index}>
-
-                              <div className="flex flex-col gap-1 sm:flex-row sm:items-start sm:justify-between">
-
-                                <div>
-
-                                  {experience.jobTitle && (
-                                    <p className="font-semibold text-slate-900">
-                                      {
-                                        experience.jobTitle
-                                      }
-                                    </p>
-                                  )}
-
-                                  <p className="text-sm text-slate-600">
-                                    {[
-                                      experience.company,
-                                      experience.location,
-                                    ]
-                                      .filter(Boolean)
-                                      .join(" · ")}
-                                  </p>
-
-                                </div>
-
-                                {(experience.startDate ||
-                                  experience.endDate ||
-                                  experience.current) && (
-                                  <p className="text-sm text-slate-500">
-
-                                    {
-                                      experience.startDate
-                                    }
-
-                                    {experience.startDate
-                                      ? " – "
-                                      : ""}
-
-                                    {experience.current
-                                      ? "Present"
-                                      : experience.endDate}
-
-                                  </p>
-                                )}
-
-                              </div>
-
-                              {experience.description && (
-                                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-slate-700">
-                                  {
-                                    experience.description
-                                  }
-                                </p>
-                              )}
-
-                            </div>
-                          );
-                        }
-                      )}
-
-                    </div>
-
-                  </ResumeSection>
-                )}
-
-              </div>
-            </div>
+            <ResumePreview
+              fullName={
+                fullName
+              }
+              jobTitle={
+                jobTitle
+              }
+              location={
+                location
+              }
+              email={
+                email
+              }
+              phone={
+                phone
+              }
+              linkedin={
+                linkedin
+              }
+              github={
+                github
+              }
+              portfolio={
+                portfolio
+              }
+              summary={
+                summary
+              }
+              skillSections={
+                skillSections
+              }
+              experiences={
+                experiences
+              }
+              education={
+                education
+              }
+              projects={
+                projects
+              }
+              additionalQualifications={
+                parsedAdditionalQualifications
+              }
+            />
 
           </div>
 
         </div>
+
       </div>
+
     </div>
   );
 }
 
+// ======================================================
+// SECTION
+// ======================================================
+
+function Section({
+  children,
+}: {
+  children:
+    React.ReactNode;
+}) {
+  return (
+    <section className="rounded-3xl border border-slate-200 bg-white p-5 sm:p-6">
+      {children}
+    </section>
+  );
+}
+
+// ======================================================
+// SECTION HEADER
+// ======================================================
+
+function SectionHeader({
+  title,
+  description,
+}: {
+  title: string;
+  description?: string;
+}) {
+  return (
+    <div>
+
+      <h2 className="text-xl font-bold text-slate-900">
+        {title}
+      </h2>
+
+      {description && (
+        <p className="mt-1 text-sm leading-6 text-slate-500">
+          {description}
+        </p>
+      )}
+
+    </div>
+  );
+}
+
+// ======================================================
+// SECTION HEADER + BUTTON
+// ======================================================
+
+function SectionHeaderWithButton({
+  title,
+  description,
+  buttonText,
+  onClick,
+}: {
+  title: string;
+  description?: string;
+  buttonText: string;
+  onClick: () => void;
+}) {
+  return (
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+
+      <SectionHeader
+        title={
+          title
+        }
+        description={
+          description
+        }
+      />
+
+      <button
+        type="button"
+        onClick={
+          onClick
+        }
+        className="w-fit shrink-0 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+      >
+        {buttonText}
+      </button>
+
+    </div>
+  );
+}
 
 // ======================================================
 // FIELD
@@ -1127,10 +2020,17 @@ function Field({
   disabled = false,
 }: {
   label: string;
+
   value: string;
-  onChange: (value: string) => void;
+
+  onChange:
+    (value: string) =>
+      void;
+
   placeholder?: string;
+
   type?: string;
+
   disabled?: boolean;
 }) {
   return (
@@ -1141,49 +2041,28 @@ function Field({
       </label>
 
       <input
-        type={type}
-        value={value}
-        onChange={(event) =>
+        type={
+          type
+        }
+        value={
+          value
+        }
+        onChange={(
+          event
+        ) =>
           onChange(
             event.target.value
           )
         }
-        placeholder={placeholder}
-        disabled={disabled}
+        placeholder={
+          placeholder
+        }
+        disabled={
+          disabled
+        }
         className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition placeholder:text-slate-300 focus:border-emerald-500 disabled:bg-slate-100 disabled:text-slate-400"
       />
 
     </div>
-  );
-}
-
-
-// ======================================================
-// RESUME SECTION
-// ======================================================
-
-function ResumeSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <section className="mt-8">
-
-      <div className="border-b border-slate-300 pb-2">
-
-        <h2 className="text-sm font-bold uppercase tracking-wide text-slate-950">
-          {title}
-        </h2>
-
-      </div>
-
-      <div className="mt-3">
-        {children}
-      </div>
-
-    </section>
   );
 }
