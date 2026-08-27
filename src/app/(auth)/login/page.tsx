@@ -2,6 +2,7 @@ import Link from "next/link";
 
 import { login } from "./actions";
 import PasswordInput from "@/components/PasswordInput";
+import LoginButton from "@/components/LoginButton";
 
 type LoginPageProps = {
   searchParams: Promise<{
@@ -144,12 +145,7 @@ export default async function LoginPage({
 
           {/* SIGN IN BUTTON */}
 
-          <button
-            type="submit"
-            className="w-full rounded-xl bg-emerald-700 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800"
-          >
-            Sign in
-          </button>
+         <LoginButton />
 
         </form>
 
