@@ -11,6 +11,8 @@ import DashboardCard from "@/components/dashboard/DashboardCard";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 
+import DashboardGreeting from "@/components/DashboardGreeting";
+
 import { createClient } from "@/lib/supabase/server";
 import { getStatusStyles } from "@/lib/application-status";
 
@@ -82,48 +84,27 @@ export default async function DashboardPage() {
     .limit(3);
 
   // Greeting
-  const now = new Date();
-
-  const hour = now.getHours();
-
-  const greeting =
-    hour < 12
-      ? "Good Morning"
-      : hour < 18
-        ? "Good Afternoon"
-        : "Good Evening";
-
-  const formattedDate = now.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-  });
+  <DashboardGreeting
+  name={firstName}
+/>
 
   return (
     <div className="p-8">
       {/* Greeting */}
       <div className="flex items-end justify-between">
-        <div>
-          <p className="text-sm font-medium uppercase tracking-wide text-slate-400">
-            {formattedDate}
-          </p>
+       <div className="flex items-end justify-between">
+          <DashboardGreeting
+            name={firstName}
+          />
 
-          <h1 className="mt-3 text-4xl font-bold tracking-tight text-slate-900">
-            {greeting}, {firstName}.
-          </h1>
-
-          <p className="mt-2 text-lg text-slate-500">
-            Ready to take the next step in your career?
-          </p>
+          <Link
+            href="/dashboard/applications/new"
+            className="flex items-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800"
+          >
+            <Plus className="h-5 w-5" />
+            New Application
+          </Link>
         </div>
-
-        <Link
-          href="/dashboard/applications/new"
-          className="flex items-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white transition hover:bg-emerald-800"
-        >
-          <Plus className="h-5 w-5" />
-          New Application
-        </Link>
       </div>
 
       {/* Career Profile */}
