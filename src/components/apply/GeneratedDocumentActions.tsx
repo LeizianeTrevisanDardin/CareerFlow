@@ -112,6 +112,25 @@ export default function GeneratedDocumentActions({
       .trim();
   }
 
+  function cleanMarkdown(
+    value: string
+  ) {
+    return value
+      .replace(
+        /\[([^\]]+)\]\((?:mailto:)?[^)]+\)/g,
+        "$1"
+      )
+      .replace(
+        /\*\*(.*?)\*\*/g,
+        "$1"
+      )
+      .replace(
+        /\r\n/g,
+        "\n"
+      )
+      .trim();
+  }
+
   function parseCoverLetter(
     value: string
   ) {
@@ -320,9 +339,14 @@ export default function GeneratedDocumentActions({
   // ======================================================
 
   async function createCoverLetterDocx() {
+    const cleanedContent =
+      cleanMarkdown(
+        content
+      );
+
     const paragraphs =
       parseCoverLetter(
-        content
+        cleanedContent
       );
 
     const children:
@@ -345,12 +369,12 @@ export default function GeneratedDocumentActions({
                 children: [
                   new TextRun({
                     text: line,
-                    size: 22,
+                    size: 20,
                   }),
                 ],
 
                 spacing: {
-                  after: 60,
+                  after: 30,
                 },
               })
             );
@@ -370,7 +394,7 @@ export default function GeneratedDocumentActions({
               ],
 
               spacing: {
-                after: 140,
+                after: 70,
               },
             })
           );
@@ -384,10 +408,10 @@ export default function GeneratedDocumentActions({
           properties: {
             page: {
               margin: {
-                top: 900,
-                right: 900,
-                bottom: 900,
-                left: 900,
+                top: 650,
+                right: 650,
+                bottom: 650,
+                left: 650,
               },
             },
           },
@@ -664,109 +688,263 @@ export default function GeneratedDocumentActions({
   // ======================================================
 
   function createCoverLetterPdf() {
-    const paragraphs =
-      parseCoverLetter(
-        content
-      );
-
-    const pdf =
-      new jsPDF({
-        orientation:
-          "portrait",
-
-        unit: "pt",
-
-        format: "letter",
-      });
-
-    const pageWidth =
-      pdf.internal.pageSize.getWidth();
-
-    const pageHeight =
-      pdf.internal.pageSize.getHeight();
-
-    const leftMargin = 65;
-    const rightMargin = 65;
-    const topMargin = 65;
-    const bottomMargin = 65;
-
-    const usableWidth =
-      pageWidth -
-      leftMargin -
-      rightMargin;
-
-    let currentY =
-      topMargin;
-
-    function addPageIfNeeded(
-      requiredHeight: number
-    ) {
-      if (
-        currentY +
-          requiredHeight >
-        pageHeight -
-          bottomMargin
-      ) {
-        pdf.addPage();
-
-        currentY =
-          topMargin;
-      }
-    }
-
-    pdf.setFont(
-      "helvetica",
-      "normal"
+  const cleanedContent =
+    cleanMarkdown(
+      content
     );
 
-    pdf.setFontSize(11);
+  const paragraphs =
+    parseCoverLetter(
+      cleanedContent
+    );
+
+  const pdf =
+    new jsPDF({
+      orientation: "portrait",
+      unit: "pt",
+      format: "letter",
+    });
+
+  const pageWidth =
+    pdf.internal.pageSize.getWidth();
+
+  const pageHeight =
+    pdf.internal.pageSize.getHeight();
+
+  // ==========================================
+  // PAGE SETTINGS
+  // ==========================================
+
+  const leftMargin = 40;
+  const rightMargin = 40;
+  const topMargin = 36;
+  const bottomMargin = 34;
+
+  const usableWidth =
+    pageWidth -
+    leftMargin -
+    rightMargin;
+
+  const usableHeight =
+    pageHeight -
+    topMargin -
+    bottomMargin;
+
+  // ==========================================
+  // AUTO-FIT PRESETS
+  // ==========================================
+
+  const presets = [
+    {
+      fontSize: 10.5,
+      lineHeight: 13,
+      paragraphSpacing: 8,
+    },
+    {
+      fontSize: 10,
+      lineHeight: 12.5,
+      paragraphSpacing: 7,
+    },
+    {
+      fontSize: 9.5,
+      lineHeight: 12,
+      paragraphSpacing: 6,
+    },
+    {
+      fontSize: 9,
+      lineHeight: 11.5,
+      paragraphSpacing: 5,
+    },
+    {
+      fontSize: 8.5,
+      lineHeight: 11,
+      paragraphSpacing: 4,
+    },
+  ];
+
+  // ==========================================
+  // CALCULATE DOCUMENT HEIGHT
+  // ==========================================
+
+  function calculateHeight(
+    fontSize: number,
+    lineHeight: number,
+    paragraphSpacing: number
+  ) {
+    let totalHeight = 0;
 
     paragraphs.forEach(
-      (paragraph) => {
+      (
+        paragraph,
+        paragraphIndex
+      ) => {
         const lines =
           paragraph
             .split("\n")
-            .map((line) =>
-              line.trim()
+            .map(
+              (line) =>
+                line.trim()
             )
             .filter(Boolean);
 
         lines.forEach(
-          (line) => {
+          (
+            line,
+            lineIndex
+          ) => {
+            const isName =
+              paragraphIndex === 0 &&
+              lineIndex === 0;
+
+            pdf.setFont(
+              "helvetica",
+              isName
+                ? "bold"
+                : "normal"
+            );
+
+            pdf.setFontSize(
+              isName
+                ? fontSize + 1
+                : fontSize
+            );
+
             const wrapped =
               pdf.splitTextToSize(
                 line,
                 usableWidth
               );
 
-            const lineHeight =
-              16;
-
-            const height =
+            totalHeight +=
               wrapped.length *
-              lineHeight;
-
-            addPageIfNeeded(
-              height + 4
-            );
-
-            pdf.text(
-              wrapped,
-              leftMargin,
-              currentY
-            );
-
-            currentY +=
-              height;
+              (
+                isName
+                  ? lineHeight + 1
+                  : lineHeight
+              );
           }
         );
 
-        currentY += 13;
+        if (
+          paragraphIndex <
+          paragraphs.length - 1
+        ) {
+          totalHeight +=
+            paragraphSpacing;
+        }
       }
     );
 
-    return pdf;
+    return totalHeight;
   }
+
+  // ==========================================
+  // PICK BEST SIZE
+  // ==========================================
+
+  let selected =
+    presets[
+      presets.length - 1
+    ];
+
+  for (
+    const preset of presets
+  ) {
+    const height =
+      calculateHeight(
+        preset.fontSize,
+        preset.lineHeight,
+        preset.paragraphSpacing
+      );
+
+    if (
+      height <=
+      usableHeight
+    ) {
+      selected =
+        preset;
+
+      break;
+    }
+  }
+
+  // ==========================================
+  // RENDER
+  // ==========================================
+
+  let currentY =
+    topMargin;
+
+  paragraphs.forEach(
+    (
+      paragraph,
+      paragraphIndex
+    ) => {
+      const lines =
+        paragraph
+          .split("\n")
+          .map(
+            (line) =>
+              line.trim()
+          )
+          .filter(Boolean);
+
+      lines.forEach(
+        (
+          line,
+          lineIndex
+        ) => {
+          const isName =
+            paragraphIndex === 0 &&
+            lineIndex === 0;
+
+          pdf.setFont(
+            "helvetica",
+            isName
+              ? "bold"
+              : "normal"
+          );
+
+          pdf.setFontSize(
+            isName
+              ? selected.fontSize + 1
+              : selected.fontSize
+          );
+
+          const wrapped =
+            pdf.splitTextToSize(
+              line,
+              usableWidth
+            );
+
+          pdf.text(
+            wrapped,
+            leftMargin,
+            currentY
+          );
+
+          currentY +=
+            wrapped.length *
+            (
+              isName
+                ? selected.lineHeight + 1
+                : selected.lineHeight
+            );
+        }
+      );
+
+      if (
+        paragraphIndex <
+        paragraphs.length - 1
+      ) {
+        currentY +=
+          selected.paragraphSpacing;
+      }
+    }
+  );
+
+  return pdf;
+}
 
   // ======================================================
   // DOWNLOAD PDF
