@@ -295,11 +295,18 @@ Return only the cover letter itself.
 `;
 
   // ==========================================
-  // GEMINI
-  // ==========================================
+// GEMINI
+// ==========================================
 
-  let content = "";
+let content = "";
 
+const MAX_RETRIES = 3;
+
+for (
+  let attempt = 1;
+  attempt <= MAX_RETRIES;
+  attempt++
+) {
   try {
     const response =
       await gemini.models.generateContent({
@@ -309,22 +316,62 @@ Return only the cover letter itself.
 
     content =
       response.text?.trim() ?? "";
+
+    if (content) {
+      break;
+    }
   } catch (error) {
     console.error(
-      "Standalone cover letter Gemini error:",
+      `Standalone cover letter Gemini error - attempt ${attempt}:`,
       error
     );
 
-    redirect(
-      "/dashboard/cover-letter?error=generation_failed"
-    );
-  }
+    const status =
+      typeof error === "object" &&
+      error !== null &&
+      "status" in error
+        ? Number(
+            (
+              error as {
+                status?: number;
+              }
+            ).status
+          )
+        : undefined;
 
-  if (!content) {
-    redirect(
-      "/dashboard/cover-letter?error=generation_failed"
+    const isTemporaryError =
+      status === 429 ||
+      status === 500 ||
+      status === 502 ||
+      status === 503 ||
+      status === 504;
+
+    if (
+      !isTemporaryError ||
+      attempt === MAX_RETRIES
+    ) {
+      redirect(
+        isTemporaryError
+          ? "/dashboard/cover-letter?error=ai_temporarily_unavailable"
+          : "/dashboard/cover-letter?error=generation_failed"
+      );
+    }
+
+    await new Promise(
+      (resolve) =>
+        setTimeout(
+          resolve,
+          attempt * 1000
+        )
     );
   }
+}
+
+if (!content) {
+  redirect(
+    "/dashboard/cover-letter?error=generation_failed"
+  );
+}
 
   // ==========================================
   // SAVE COVER LETTER
@@ -412,5 +459,227 @@ Return only the cover letter itself.
 
   redirect(
     `/dashboard/cover-letter/${coverLetter.id}?success=generated`
+  );
+}
+export async function updateCoverLetterContent(
+  formData: FormData
+) {
+  const supabase =
+    await createClient();
+
+  const {
+    data: { user },
+  } =
+    await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const coverLetterId =
+    String(
+      formData.get("coverLetterId") || ""
+    ).trim();
+
+  const content =
+    String(
+      formData.get("content") || ""
+    ).trim();
+
+  if (
+    !coverLetterId ||
+    !content
+  ) {
+    redirect(
+      `/dashboard/cover-letter/${coverLetterId}?error=missing_content`
+    );
+  }
+
+  const {
+    error,
+  } = await supabase
+    .from("cover_letters")
+    .update({
+      content,
+      updated_at:
+        new Date().toISOString(),
+    })
+    .eq(
+      "id",
+      coverLetterId
+    )
+    .eq(
+      "user_id",
+      user.id
+    );
+
+  if (error) {
+    console.error(
+      "Error updating cover letter:",
+      error
+    );
+
+    redirect(
+      `/dashboard/cover-letter/${coverLetterId}?error=update_failed`
+    );
+  }
+
+  revalidatePath(
+    `/dashboard/cover-letter/${coverLetterId}`
+  );
+
+  redirect(
+    `/dashboard/cover-letter/${coverLetterId}?success=updated`
+  );
+}
+export async function createManualCoverLetter(
+  formData: FormData
+) {
+  const supabase =
+    await createClient();
+
+  const {
+    data: { user },
+  } =
+    await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const title =
+    String(
+      formData.get("title") || ""
+    ).trim();
+
+  const companyName =
+    String(
+      formData.get("companyName") || ""
+    ).trim();
+
+  const content =
+    String(
+      formData.get("content") || ""
+    ).trim();
+
+  if (!content) {
+    redirect(
+      "/dashboard/cover-letter?error=manual_content_missing"
+    );
+  }
+
+  const {
+    data: coverLetter,
+    error,
+  } = await supabase
+    .from("cover_letters")
+    .insert({
+      user_id:
+        user.id,
+
+      resume_id:
+        null,
+
+      job_title:
+        title || "Cover Letter",
+
+      company_name:
+        companyName || null,
+
+      job_description:
+        null,
+
+      content,
+
+      status:
+        "completed",
+
+      updated_at:
+        new Date().toISOString(),
+    })
+    .select(
+      "id"
+    )
+    .single();
+
+  if (
+    error ||
+    !coverLetter
+  ) {
+    console.error(
+      "Error creating manual cover letter:",
+      error
+    );
+
+    redirect(
+      "/dashboard/cover-letter?error=manual_save_failed"
+    );
+  }
+
+  revalidatePath(
+    "/dashboard/cover-letter"
+  );
+
+  redirect(
+    `/dashboard/cover-letter/${coverLetter.id}?success=created`
+  );
+}
+
+export async function deleteCoverLetter(
+  formData: FormData
+) {
+  const supabase =
+    await createClient();
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect("/login");
+  }
+
+  const coverLetterId =
+    String(
+      formData.get("coverLetterId") || ""
+    ).trim();
+
+  if (!coverLetterId) {
+    redirect(
+      "/dashboard/cover-letter?error=missing_cover_letter"
+    );
+  }
+
+  const {
+    error,
+  } = await supabase
+    .from("cover_letters")
+    .delete()
+    .eq(
+      "id",
+      coverLetterId
+    )
+    .eq(
+      "user_id",
+      user.id
+    );
+
+  if (error) {
+    console.error(
+      "Error deleting cover letter:",
+      error
+    );
+
+    redirect(
+      "/dashboard/cover-letter?error=delete_failed"
+    );
+  }
+
+  revalidatePath(
+    "/dashboard/cover-letter"
+  );
+
+  redirect(
+    "/dashboard/cover-letter?success=deleted"
   );
 }

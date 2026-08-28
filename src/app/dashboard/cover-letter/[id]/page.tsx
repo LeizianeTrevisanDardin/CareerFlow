@@ -7,6 +7,7 @@ import { createClient } from "@/lib/supabase/server";
 
 import CoverLetterPreview from "@/components/apply/CoverLetterPreview";
 import GeneratedDocumentActions from "@/components/apply/GeneratedDocumentActions";
+import CoverLetterEditor from "@/components/cover-letter/CoverLetterEditor";
 
 export default async function CoverLetterResultPage({
   params,
@@ -131,9 +132,22 @@ export default async function CoverLetterResultPage({
 
           {/* PREVIEW */}
 
+          <div className="mt-6">
+            <CoverLetterEditor
+              coverLetterId={
+                coverLetter.id
+              }
+              content={
+                coverLetter.content
+              }
+            />
+          </div>
+
           <div className="mt-6 overflow-hidden rounded-2xl border border-slate-200 bg-slate-100 p-2 sm:p-4 lg:p-6">
             <CoverLetterPreview
-              content={coverLetter.content}
+              content={
+                coverLetter.content
+              }
             />
           </div>
 
